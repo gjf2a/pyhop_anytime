@@ -32,4 +32,4 @@ def find_verbosity(args):
 def find_max_seconds(args):
     for arg in args:
         if arg.startswith("-s"):
-            return int(args.split(':')[1])
+            return int(arg.split(':')[1])
