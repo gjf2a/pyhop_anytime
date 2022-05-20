@@ -49,6 +49,13 @@ class TaskList:
     def __repr__(self):
         return f"TaskList(options={self.options},completed={self.completed})"
 
+    def add_option(self, option):
+        self.options.append(option)
+
+    def add_options(self, option_seq):
+        for option in option_seq:
+            self.add_option(option)
+
     def complete(self):
         return self.completed
 
