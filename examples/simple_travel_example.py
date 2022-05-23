@@ -39,7 +39,7 @@ def pay_driver(state, a):
         return state
 
 
-planner = pyhop.Planner()
+planner = pyhop.Planner(cost_func=lambda state, step: state.owe[step[1]] if step[0] == 'pay_driver' else 0)
 planner.declare_operators(walk, call_taxi, ride_taxi, pay_driver)
 print('')
 planner.print_operators()
@@ -67,7 +67,7 @@ state1 = pyhop.State('state1')
 state1.loc = {'me': 'home'}
 state1.cash = {'me': 20}
 state1.owe = {'me': 0}
-state1.dist = {'home': {'park': 8}, 'park': {'home': 8}}
+state1.dist = {'home': {'park': 8, 'coffee_shop': 2}, 'park': {'home': 8, 'coffee_shop': 10}, 'coffee_shop': {'home': 2, 'park': 10}}
 
 print("""
 ********************************************************************************
@@ -90,9 +90,14 @@ planner.pyhop(state1, [('travel', 'me', 'home', 'park')], 3)
 
 class Test(unittest.TestCase):
 
-    def test(self):
+    def test1(self):
         plan = planner.pyhop(state1, [('travel', 'me', 'home', 'park')])
         self.assertEqual(plan, [('call_taxi', 'me', 'home'), ('ride_taxi', 'me', 'home', 'park'), ('pay_driver', 'me')])
+
+    def test2(self):
+        plans = planner.anyhop(state1, [('travel', 'me', 'home', 'coffee_shop')])
+        plans = [p[0] for p in plans]
+        self.assertEqual(plans, [[('call_taxi', 'me', 'home'), ('ride_taxi', 'me', 'home', 'coffee_shop'), ('pay_driver', 'me')], [('walk', 'me', 'home', 'coffee_shop')]])
 
 
 if __name__ == '__main__':

@@ -67,8 +67,9 @@ class TaskList:
 
 
 class Planner:
-    def __init__(self, verbose=0, copyfunc=copy.deepcopy):
-        self.copyfunc = copyfunc
+    def __init__(self, verbose=0, copy_func=copy.deepcopy, cost_func=lambda state, step: 1):
+        self.copy_func = copy_func
+        self.cost_func = cost_func
         self.operators = {}
         self.methods = {}
         self.verbose = verbose
@@ -113,17 +114,17 @@ class Planner:
     def pyhop_generator(self, state, tasks, verbose=0, disable_branch_bound=False):
         self.verbose = verbose
         self.log(1, f"** anyhop, verbose={self.verbose}: **\n   state = {state.__name__}\n   tasks = {tasks}")
-        options = [PlanStep([], tasks, state, self.copyfunc)]
-        shortest_length = None
+        options = [PlanStep([], tasks, state, self.copy_func, self.cost_func)]
+        lowest_cost = None
         while len(options) > 0:
             candidate = options.pop()
-            if shortest_length is None or (not disable_branch_bound and candidate.depth() < shortest_length):
+            if lowest_cost is None or (not disable_branch_bound and candidate.total_cost < lowest_cost):
                 self.log(2, f"depth {candidate.depth()} tasks {candidate.tasks}")
                 self.log(3, f"plan: {candidate.plan}")
                 if candidate.complete():
                     self.log(3, f"depth {candidate.depth()} returns plan {candidate.plan}")
                     self.log(1, f"** result = {candidate.plan}\n")
-                    shortest_length = len(candidate.plan)
+                    lowest_cost = candidate.total_cost
                     yield candidate.plan
                 else:
                     options.extend(candidate.successors(self))
@@ -141,11 +142,14 @@ class Planner:
 
 
 class PlanStep:
-    def __init__(self, plan, tasks, state, copyfunc):
-        self.copyfunc = copyfunc
+    def __init__(self, plan, tasks, state, copy_func, cost_func, current_cost=0, past_cost=0):
+        self.copy_func = copy_func
+        self.cost_func = cost_func
         self.plan = plan
         self.tasks = tasks
         self.state = state
+        self.total_cost = past_cost + current_cost
+        self.current_cost = current_cost
 
     def depth(self):
         return len(self.plan)
@@ -168,10 +172,10 @@ class PlanStep:
         if next_task[0] in planner.operators:
             planner.log(3, f"depth {self.depth()} action {next_task}")
             operator = planner.operators[next_task[0]]
-            newstate = operator(self.copyfunc(self.state), *next_task[1:])
+            newstate = operator(self.copy_func(self.state), *next_task[1:])
             planner.log_state(3, f"depth {self.depth()} new state:", newstate)
             if newstate:
-                options.append(PlanStep(self.plan + [next_task], self.tasks[1:], newstate, self.copyfunc))
+                options.append(PlanStep(self.plan + [next_task], self.tasks[1:], newstate, self.copy_func, self.cost_func, past_cost=self.total_cost, current_cost=self.cost_func(self.state, next_task)))
 
     def add_method_options(self, options, planner):
         next_task = self.next_task()
@@ -182,7 +186,7 @@ class PlanStep:
             if subtask_options is not None:
                 for subtasks in subtask_options.options:
                     planner.log(3, f"depth {self.depth()} new tasks: {subtasks}")
-                    options.append(PlanStep(self.plan, subtasks + self.tasks[1:], self.state, self.copyfunc))
+                    options.append(PlanStep(self.plan, subtasks + self.tasks[1:], self.state, self.copy_func, self.cost_func, past_cost=self.total_cost))
 
     def next_task(self):
         result = self.tasks[0]
