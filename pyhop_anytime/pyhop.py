@@ -67,7 +67,8 @@ class TaskList:
 
 
 class Planner:
-    def __init__(self, verbose=0):
+    def __init__(self, verbose=0, copyfunc=copy.deepcopy):
+        self.copyfunc = copyfunc
         self.operators = {}
         self.methods = {}
         self.verbose = verbose
@@ -112,7 +113,7 @@ class Planner:
     def pyhop_generator(self, state, tasks, verbose=0, disable_branch_bound=False):
         self.verbose = verbose
         self.log(1, f"** anyhop, verbose={self.verbose}: **\n   state = {state.__name__}\n   tasks = {tasks}")
-        options = [PlanStep([], tasks, state)]
+        options = [PlanStep([], tasks, state, self.copyfunc)]
         shortest_length = None
         while len(options) > 0:
             candidate = options.pop()
@@ -140,7 +141,8 @@ class Planner:
 
 
 class PlanStep:
-    def __init__(self, plan, tasks, state):
+    def __init__(self, plan, tasks, state, copyfunc):
+        self.copyfunc = copyfunc
         self.plan = plan
         self.tasks = tasks
         self.state = state
@@ -166,10 +168,10 @@ class PlanStep:
         if next_task[0] in planner.operators:
             planner.log(3, f"depth {self.depth()} action {next_task}")
             operator = planner.operators[next_task[0]]
-            newstate = operator(copy.deepcopy(self.state), *next_task[1:])
+            newstate = operator(self.copyfunc(self.state), *next_task[1:])
             planner.log_state(3, f"depth {self.depth()} new state:", newstate)
             if newstate:
-                options.append(PlanStep(self.plan + [next_task], self.tasks[1:], newstate))
+                options.append(PlanStep(self.plan + [next_task], self.tasks[1:], newstate, self.copyfunc))
 
     def add_method_options(self, options, planner):
         next_task = self.next_task()
@@ -180,7 +182,7 @@ class PlanStep:
             if subtask_options is not None:
                 for subtasks in subtask_options.options:
                     planner.log(3, f"depth {self.depth()} new tasks: {subtasks}")
-                    options.append(PlanStep(self.plan, subtasks + self.tasks[1:], self.state))
+                    options.append(PlanStep(self.plan, subtasks + self.tasks[1:], self.state, self.copyfunc))
 
     def next_task(self):
         result = self.tasks[0]
