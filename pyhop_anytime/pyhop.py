@@ -117,7 +117,7 @@ class Planner:
         shortest_length = None
         while len(options) > 0:
             candidate = options.pop()
-            if shortest_length is None or (not disable_branch_bound and len(candidate.plan) < shortest_length):
+            if shortest_length is None or (not disable_branch_bound and candidate.depth() < shortest_length):
                 self.log(2, f"depth {candidate.depth()} tasks {candidate.tasks}")
                 self.log(3, f"plan: {candidate.plan}")
                 if candidate.complete():
