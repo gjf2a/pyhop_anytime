@@ -46,9 +46,10 @@ class HybridQueue:
     def enqueue_all(self, items):
         if self.next_pop:
             assert False
-        for item in items[:-1]:
-            heapq.heappush(self.heap, item)
-        self.next_pop = items[-1]
+        if len(items) > 0:
+            for item in items[:-1]:
+                heapq.heappush(self.heap, item)
+            self.next_pop = items[-1]
 
     def dequeue(self):
         if self.next_pop:
