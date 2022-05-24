@@ -126,7 +126,7 @@ class Planner:
                     self.log(1, f"** result = {candidate.plan}\n")
                     lowest_cost = candidate.total_cost
                     if yield_cost:
-                        yield candidate.total_cost, candidate.plan
+                        yield candidate.plan, candidate.total_cost
                     else:
                         yield candidate.plan
                 else:
