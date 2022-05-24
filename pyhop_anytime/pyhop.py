@@ -28,6 +28,7 @@ Copyright 2013 Dana S. Nau - http://www.cs.umd.edu/~nau
 
 import copy
 import time
+from pyhop_anytime.search_queues import *
 
 
 class State:
@@ -114,10 +115,11 @@ class Planner:
     def pyhop_generator(self, state, tasks, verbose=0, disable_branch_bound=False, yield_cost=False):
         self.verbose = verbose
         self.log(1, f"** anyhop, verbose={self.verbose}: **\n   state = {state.__name__}\n   tasks = {tasks}")
-        options = [PlanStep([], tasks, state, self.copy_func, self.cost_func)]
+        options = SearchStack()
+        options.enqueue_all_steps([PlanStep([], tasks, state, self.copy_func, self.cost_func)])
         lowest_cost = None
-        while len(options) > 0:
-            candidate = options.pop()
+        while not options.empty():
+            candidate = options.dequeue_step()
             if disable_branch_bound or lowest_cost is None or candidate.total_cost < lowest_cost:
                 self.log(2, f"depth {candidate.depth()} tasks {candidate.tasks}")
                 self.log(3, f"plan: {candidate.plan}")
@@ -130,7 +132,7 @@ class Planner:
                     else:
                         yield candidate.plan
                 else:
-                    options.extend(candidate.successors(self))
+                    options.enqueue_all_steps(candidate.successors(self))
                     yield None
             else:
                 yield None

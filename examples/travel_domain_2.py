@@ -52,7 +52,7 @@ class Test(unittest.TestCase):
         planner = make_travel_planner()
         plans = planner.anyhop(state, [('find_route', 'robot', 'mcrey312', 'copyroom')], verbose=3)
         print(plans)
-        plans = [plan for (plan, time) in plans]
+        plans = [plan for (plan, cost, time) in plans]
         self.assertEqual(plans, [[('go', 'robot', 'mcrey312', 'mcrey314'), ('go', 'robot', 'mcrey314', 'hallway'), ('go', 'robot', 'hallway', 'lounge'), ('go', 'robot', 'lounge', 'copyroom')], [('go', 'robot', 'mcrey312', 'hallway'), ('go', 'robot', 'hallway', 'lounge'), ('go', 'robot', 'lounge', 'copyroom')]])
         plan = planner.pyhop(state, [('find_route', 'robot', 'mcrey312', 'no-room')])
         self.assertEqual(plan, None)
