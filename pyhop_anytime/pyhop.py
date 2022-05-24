@@ -103,15 +103,15 @@ class Planner:
     def anyhop(self, state, tasks, max_seconds=None, verbose=0, disable_branch_bound=False):
         start_time = time.time()
         plan_times = []
-        for plan in self.pyhop_generator(state, tasks, verbose, disable_branch_bound):
+        for plan in self.pyhop_generator(state, tasks, verbose, disable_branch_bound, yield_cost=True):
             elapsed_time = time.time() - start_time
             if max_seconds and elapsed_time > max_seconds:
                 break
             if plan:
-                plan_times.append((plan, elapsed_time))
+                plan_times.append((plan[0], plan[1], elapsed_time))
         return plan_times
 
-    def pyhop_generator(self, state, tasks, verbose=0, disable_branch_bound=False):
+    def pyhop_generator(self, state, tasks, verbose=0, disable_branch_bound=False, yield_cost=False):
         self.verbose = verbose
         self.log(1, f"** anyhop, verbose={self.verbose}: **\n   state = {state.__name__}\n   tasks = {tasks}")
         options = [PlanStep([], tasks, state, self.copy_func, self.cost_func)]
@@ -125,7 +125,10 @@ class Planner:
                     self.log(3, f"depth {candidate.depth()} returns plan {candidate.plan}")
                     self.log(1, f"** result = {candidate.plan}\n")
                     lowest_cost = candidate.total_cost
-                    yield candidate.plan
+                    if yield_cost:
+                        yield candidate.total_cost, candidate.plan
+                    else:
+                        yield candidate.plan
                 else:
                     options.extend(candidate.successors(self))
                     yield None
@@ -138,7 +141,7 @@ class Planner:
 
     def anyhop_stats(self, state, tasks, max_seconds=None, verbose=0):
         plans = self.anyhop(state, tasks, max_seconds, verbose)
-        return [(len(plan), time) for (plan, time) in plans]
+        return [(len(plan), cost, time) for (plan, cost, time) in plans]
 
 
 class PlanStep:
