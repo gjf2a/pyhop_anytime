@@ -101,10 +101,11 @@ class Planner:
             if plan:
                 return plan
 
-    def anyhop(self, state, tasks, max_seconds=None, verbose=0, disable_branch_bound=False):
+    def anyhop(self, state, tasks, max_seconds=None, verbose=0, disable_branch_bound=False, enable_hybrid_queue=False):
         start_time = time.time()
         plan_times = []
-        for plan in self.pyhop_generator(state, tasks, verbose, disable_branch_bound, yield_cost=True):
+        for plan in self.pyhop_generator(state, tasks, verbose, disable_branch_bound, yield_cost=True,
+                                         enable_hybrid_queue=enable_hybrid_queue):
             elapsed_time = time.time() - start_time
             if max_seconds and elapsed_time > max_seconds:
                 break
@@ -112,10 +113,10 @@ class Planner:
                 plan_times.append((plan[0], plan[1], elapsed_time))
         return plan_times
 
-    def pyhop_generator(self, state, tasks, verbose=0, disable_branch_bound=False, yield_cost=False):
+    def pyhop_generator(self, state, tasks, verbose=0, disable_branch_bound=False, yield_cost=False, enable_hybrid_queue=False):
         self.verbose = verbose
         self.log(1, f"** anyhop, verbose={self.verbose}: **\n   state = {state.__name__}\n   tasks = {tasks}")
-        options = SearchStack()
+        options = HybridQueue() if enable_hybrid_queue else SearchStack()
         options.enqueue_all_steps([PlanStep([], tasks, state, self.copy_func, self.cost_func)])
         lowest_cost = None
         while not options.empty():
