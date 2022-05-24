@@ -118,7 +118,7 @@ class Planner:
         lowest_cost = None
         while len(options) > 0:
             candidate = options.pop()
-            if lowest_cost is None or (not disable_branch_bound and candidate.total_cost < lowest_cost):
+            if disable_branch_bound or lowest_cost is None or candidate.total_cost < lowest_cost:
                 self.log(2, f"depth {candidate.depth()} tasks {candidate.tasks}")
                 self.log(3, f"plan: {candidate.plan}")
                 if candidate.complete():
