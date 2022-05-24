@@ -22,14 +22,22 @@ def anyhop_args(planner, args):
             print(len(plans), "total plans generated")
 
 
-def find_verbosity(args):
-    for arg in args:
-        if arg.startswith("-v"):
-            return int(arg.split(':')[1])
-    return 1
+def find_verbosity(args) -> int:
+    found = find_tag_int(args, "v")
+    return 1 if found is None else found
 
 
-def find_max_seconds(args):
+def find_max_seconds(args) -> int:
+    return find_tag_int(args, "s")
+
+
+def find_tag_value(args, tag) -> str:
     for arg in args:
-        if arg.startswith("-s"):
-            return int(arg.split(':')[1])
+        if arg.startswith(f"-{tag}"):
+            return arg.split(":")[1]
+
+
+def find_tag_int(args, tag) -> int:
+    value = find_tag_value(args, tag)
+    if value:
+        return int(value)
