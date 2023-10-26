@@ -29,6 +29,7 @@ Copyright 2013 Dana S. Nau - http://www.cs.umd.edu/~nau
 import copy
 import time
 from pyhop_anytime.search_queues import *
+import random
 
 
 class State:
@@ -145,6 +146,30 @@ class Planner:
     def anyhop_stats(self, state, tasks, max_seconds=None, verbose=0):
         plans = self.anyhop(state, tasks, max_seconds, verbose)
         return [(len(plan), cost, time) for (plan, cost, time) in plans]
+
+    def randhop(self, state, tasks, max_cost=None, verbose=0):
+        self.verbose = verbose
+        candidate = PlanStep([], tasks, state, self.copy_func, self.cost_func)
+        while not (candidate is None or candidate.complete()):
+            successors = candidate.successors(self)
+            if len(successors) == 0 or max_cost is not None and candidate.total_cost >= max_cost:
+                return None
+            candidate = successors[random.randint(0, len(successors) - 1)]
+        return candidate.plan, candidate.total_cost
+
+    def anyhop_random(self, state, tasks, max_seconds, verbose=0):
+        self.verbose = verbose
+        start_time = time.time()
+        elapsed_time = 0
+        max_cost = None
+        plan_times = []
+        while elapsed_time < max_seconds:
+            plan = self.randhop(state, tasks, max_cost=max_cost)
+            elapsed_time = time.time() - start_time
+            if plan is not None:
+                plan_times.append((plan[0], plan[1], elapsed_time))
+                max_cost = plan[1]
+        return plan_times
 
 
 class PlanStep:
