@@ -145,7 +145,7 @@ class Planner:
 
     def anyhop_stats(self, state, tasks, max_seconds=None, verbose=0):
         plans = self.anyhop(state, tasks, max_seconds, verbose)
-        return [(len(plan), cost, time) for (plan, cost, time) in plans]
+        return [(len(plan), cost, tm) for (plan, cost, tm) in plans]
 
     def randhop(self, state, tasks, max_cost=None, verbose=0):
         self.verbose = verbose
@@ -171,6 +171,18 @@ class Planner:
                 max_cost = plan[1]
         return plan_times
 
+    def n_random(self, state, tasks, n, verbose=0):
+        self.verbose = verbose
+        plans = []
+        for i in range(n):
+            plan = self.randhop(state, tasks)
+            if plan is not None:
+                plans.append(plan[0])
+        return plans
+
+    def anyhop_monte_carlo_generator(self, state, tasks, verbose=0):
+        self.verbose = verbose
+        
 
 class PlanStep:
     def __init__(self, plan, tasks, state, copy_func, cost_func, current_cost=0, past_cost=0):

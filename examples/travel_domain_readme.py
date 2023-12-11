@@ -44,7 +44,7 @@ def setup_state(title, people, connections):
 
 
 class Test(unittest.TestCase):
-    def test1(self):
+    def test_succeed(self):
         state = setup_state('state',
                             [('robot', 'mcrey312')],
                             [('mcrey312', 'hallway'), ('mcrey312', 'mcrey314'), ('mcrey314', 'hallway'), ('lounge', 'hallway'), ('copyroom', 'lounge')])
@@ -54,6 +54,13 @@ class Test(unittest.TestCase):
         print(plans)
         plans = [plan for (plan, cost, time) in plans]
         self.assertEqual(plans, [[('go', 'robot', 'mcrey312', 'mcrey314'), ('go', 'robot', 'mcrey314', 'hallway'), ('go', 'robot', 'hallway', 'lounge'), ('go', 'robot', 'lounge', 'copyroom')], [('go', 'robot', 'mcrey312', 'hallway'), ('go', 'robot', 'hallway', 'lounge'), ('go', 'robot', 'lounge', 'copyroom')]])
+
+    def test_fail(self):
+        state = setup_state('state',
+                            [('robot', 'mcrey312')],
+                            [('mcrey312', 'hallway'), ('mcrey312', 'mcrey314'), ('mcrey314', 'hallway'),
+                             ('lounge', 'hallway'), ('copyroom', 'lounge')])
+        planner = make_travel_planner()
         plan = planner.pyhop(state, [('find_route', 'robot', 'mcrey312', 'no-room')])
         self.assertEqual(plan, None)
 

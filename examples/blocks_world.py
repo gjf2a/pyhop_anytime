@@ -114,7 +114,7 @@ def move_blocks(state, goal):
     # This solution deviates from the original Pyhop solution by incorporating
     # nondeterminism.
     return TaskList([[('move_one', b, 'table'), ('move_blocks', goal)]
-                     for b in all_blocks(state) if status(b, state, goal) == 'waiting'])
+                     for b in all_blocks(state) if status(b, state, goal) == 'waiting' and state.pos[b] != 'table'])
 
 
 def move_one(state, b1, dest):

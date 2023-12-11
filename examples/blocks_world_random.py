@@ -26,6 +26,7 @@ else:
     print(plan[0])
     print(plan[1], len(plan[0]))
 
+print("anyhop_random() for two seconds:")
 plan_times = planner.anyhop_random(state3, [('move_blocks', goal3)], max_seconds=2.0)
 print(f"{len(plan_times)} plans")
 print([(plan[1], plan[2]) for plan in plan_times])
