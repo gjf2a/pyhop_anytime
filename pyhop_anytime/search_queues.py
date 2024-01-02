@@ -58,3 +58,36 @@ class HybridQueue:
             return result
         elif self.heap:
             return heapq.heappop(self.heap)
+
+
+class MonteCarloPlannerHeap:
+    def __init__(self, planner, num_samples=10):
+        self.planner = planner
+        self.num_samples = num_samples
+        self.plan_step_heap = []
+
+    def enqueue_all_steps(self, items):
+        for plan_step in items:
+            options = self.planner.n_random(plan_step.state, plan_step.tasks, self.num_samples)
+            costs = [plan[1] for plan in options]
+            rating = sum(costs) / len(costs)
+            heapq.heappush(self.plan_step_heap, RatedPlanStep(plan_step, rating))
+
+    def dequeue_step(self):
+        return heapq.heappop(self.plan_step_heap).step
+
+    def empty(self):
+        return len(self.plan_step_heap) == 0
+
+
+@total_ordering
+class RatedPlanStep:
+    def __init__(self, step, rating):
+        self.step = step
+        self.rating = rating
+
+    def __lt__(self, other):
+        return self.rating < other.rating
+
+    def __eq__(self, other):
+        return self.rating == other.rating

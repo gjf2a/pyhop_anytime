@@ -102,11 +102,11 @@ class Planner:
             if plan:
                 return plan
 
-    def anyhop(self, state, tasks, max_seconds=None, verbose=0, disable_branch_bound=False, enable_hybrid_queue=False):
+    def anyhop(self, state, tasks, max_seconds=None, verbose=0, disable_branch_bound=False, queue_init=lambda: SearchStack()):
         start_time = time.time()
         plan_times = []
         for plan in self.pyhop_generator(state, tasks, verbose, disable_branch_bound, yield_cost=True,
-                                         enable_hybrid_queue=enable_hybrid_queue):
+                                         queue_init=queue_init):
             elapsed_time = time.time() - start_time
             if max_seconds and elapsed_time > max_seconds:
                 break
@@ -114,10 +114,11 @@ class Planner:
                 plan_times.append((plan[0], plan[1], elapsed_time))
         return plan_times
 
-    def pyhop_generator(self, state, tasks, verbose=0, disable_branch_bound=False, yield_cost=False, enable_hybrid_queue=False):
+    def pyhop_generator(self, state, tasks, verbose=0, disable_branch_bound=False, yield_cost=False,
+                        queue_init=lambda: SearchStack()):
         self.verbose = verbose
         self.log(1, f"** anyhop, verbose={self.verbose}: **\n   state = {state.__name__}\n   tasks = {tasks}")
-        options = HybridQueue() if enable_hybrid_queue else SearchStack()
+        options = queue_init()
         options.enqueue_all_steps([PlanStep([], tasks, state, self.copy_func, self.cost_func)])
         lowest_cost = None
         while not options.empty():
@@ -177,12 +178,9 @@ class Planner:
         for i in range(n):
             plan = self.randhop(state, tasks)
             if plan is not None:
-                plans.append(plan[0])
+                plans.append(plan)
         return plans
 
-    def anyhop_monte_carlo_generator(self, state, tasks, verbose=0):
-        self.verbose = verbose
-        
 
 class PlanStep:
     def __init__(self, plan, tasks, state, copy_func, cost_func, current_cost=0, past_cost=0):
