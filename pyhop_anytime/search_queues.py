@@ -61,33 +61,58 @@ class HybridQueue:
 
 
 class MonteCarloPlannerHeap:
-    def __init__(self, planner, num_samples=10, show_progress=False):
+    def __init__(self, planner, num_samples=10, go_deep_first=True, show_progress=False):
         self.planner = planner
         self.num_samples = num_samples
         self.plan_step_heap = []
+        self.go_deep_first = go_deep_first
+        self.preferred = None
         self.show_progress = show_progress
 
     def enqueue_all_steps(self, items):
+        ratings = []
         for plan_step in items:
             options = self.planner.n_random(plan_step.state, plan_step.tasks, self.num_samples)
             costs = [plan[1] for plan in options]
-            rating = sum(costs) / len(costs)
-            heapq.heappush(self.plan_step_heap, RatedPlanStep(plan_step, rating))
+            ratings.append(sum(costs) / len(costs))
+
+        lowest = 0
+        for i in range(1, len(items)):
+            if ratings[i] < ratings[lowest]:
+                lowest = i
+
+        for i in range(len(items)):
+            step = RatedPlanStep(items[i], ratings[i])
+            if self.go_deep_first and i == lowest:
+                self.preferred = step
+            else:
+                heapq.heappush(self.plan_step_heap, step)
 
     def dequeue_step(self):
-        if self.show_progress:
-            popped = heapq.heappop(self.plan_step_heap)
-            print(f"From heap (depth {popped.step.depth()}) (rating: {popped.rating})\t", end='')
-            if popped.step.complete():
-                print("Complete!")
+        if self.preferred is None:
+            if self.show_progress:
+                popped = heapq.heappop(self.plan_step_heap)
+                progress_report("heap", popped)
+                return popped.step
             else:
-                print("In progress...")
-            return popped.step
+                return heapq.heappop(self.plan_step_heap).step
         else:
-            return heapq.heappop(self.plan_step_heap).step
+            popped = self.preferred
+            self.preferred = None
+            if self.show_progress:
+                progress_report("preferred", popped)
+            return popped.step
 
     def empty(self):
-        return len(self.plan_step_heap) == 0
+        return self.preferred is None and len(self.plan_step_heap) == 0
+
+
+def progress_report(origin, popped):
+    print(f"From {origin} (depth {popped.step.depth()}) (rating: {popped.rating})\t", end='')
+    if popped.step.complete():
+        print("Complete!")
+    else:
+        print("In progress...")
 
 
 @total_ordering
