@@ -61,10 +61,11 @@ class HybridQueue:
 
 
 class MonteCarloPlannerHeap:
-    def __init__(self, planner, num_samples=10):
+    def __init__(self, planner, num_samples=10, show_progress=False):
         self.planner = planner
         self.num_samples = num_samples
         self.plan_step_heap = []
+        self.show_progress = show_progress
 
     def enqueue_all_steps(self, items):
         for plan_step in items:
@@ -74,14 +75,16 @@ class MonteCarloPlannerHeap:
             heapq.heappush(self.plan_step_heap, RatedPlanStep(plan_step, rating))
 
     def dequeue_step(self):
-        popped = heapq.heappop(self.plan_step_heap).step
-        print(f"From heap (depth {popped.depth()})", end='')
-        if popped.complete():
-            print("Complete!")
+        if self.show_progress:
+            popped = heapq.heappop(self.plan_step_heap)
+            print(f"From heap (depth {popped.step.depth()}) (rating: {popped.rating})\t", end='')
+            if popped.step.complete():
+                print("Complete!")
+            else:
+                print("In progress...")
+            return popped.step
         else:
-            print("In progress...")
-        return popped
-        #return heapq.heappop(self.plan_step_heap).step
+            return heapq.heappop(self.plan_step_heap).step
 
     def empty(self):
         return len(self.plan_step_heap) == 0
