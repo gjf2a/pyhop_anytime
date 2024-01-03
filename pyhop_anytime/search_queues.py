@@ -70,23 +70,19 @@ class MonteCarloPlannerHeap:
         self.show_progress = show_progress
 
     def enqueue_all_steps(self, items):
-        ratings = []
+        rated_steps = []
         for plan_step in items:
             options = self.planner.n_random(plan_step.state, plan_step.tasks, self.num_samples)
-            costs = [plan.total_cost for plan in options]
-            ratings.append(sum(costs) / len(costs))
+            if len(options) > 0:
+                costs = [plan.total_cost for plan in options]
+                rating = sum(costs) / len(costs)
+                heapq.heappush(rated_steps, RatedPlanStep(plan_step, rating))
 
-        lowest = 0
-        for i in range(1, len(items)):
-            if ratings[i] < ratings[lowest]:
-                lowest = i
+        if self.go_deep_first and len(rated_steps) > 0:
+            self.preferred = heapq.heappop(rated_steps)
 
-        for i in range(len(items)):
-            step = RatedPlanStep(items[i], ratings[i])
-            if self.go_deep_first and i == lowest:
-                self.preferred = step
-            else:
-                heapq.heappush(self.plan_step_heap, step)
+        for rated_step in rated_steps:
+            heapq.heappush(self.plan_step_heap, rated_step)
 
     def dequeue_step(self):
         if self.preferred is None:
