@@ -216,7 +216,9 @@ class PlanStep:
             newstate = operator(self.copy_func(self.state), *next_task[1:])
             planner.log_state(3, f"depth {self.depth()} new state:", newstate)
             if newstate:
-                options.append(PlanStep(self.plan + [next_task], self.tasks[1:], newstate, self.copy_func, self.cost_func, past_cost=self.total_cost, current_cost=self.cost_func(self.state, next_task)))
+                options.append(PlanStep(self.plan + [next_task], self.tasks[1:], newstate, self.copy_func,
+                                        self.cost_func, past_cost=self.total_cost,
+                                        current_cost=self.cost_func(self.state, next_task)))
 
     def add_method_options(self, options, planner):
         next_task = self.next_task()

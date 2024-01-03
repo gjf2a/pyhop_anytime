@@ -41,7 +41,7 @@ def nondeterministic_choice(state):
 
 
 def tsp_planner():
-    planner = Planner()
+    planner = Planner(cost_func=lambda state, step: state.distances[state.at][step[1]])
     planner.declare_operators(move)
     planner.declare_methods(nondeterministic_choice)
     return planner
