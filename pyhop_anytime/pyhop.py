@@ -167,7 +167,7 @@ class Planner:
         while elapsed_time < max_seconds:
             plan_step = self.randhop(state, tasks, max_cost=max_cost)
             elapsed_time = time.time() - start_time
-            if plan_step is not None:
+            if plan_step is not None and (max_cost is None or plan_step.total_cost < max_cost):
                 plan_times.append((plan_step.plan, plan_step.total_cost, elapsed_time))
                 max_cost = plan_step.total_cost
         return plan_times

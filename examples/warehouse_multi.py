@@ -1,4 +1,4 @@
-# Single-robot version of the warehouse domain
+# Multi-robot version of the warehouse domain
 
 from pyhop_anytime import State, TaskList, Planner
 import random
@@ -45,7 +45,7 @@ def grid_world_plan_valid(planner, start_state, plan, tasks):
 
 
 def go(state, entity, start, end):
-    if state.loc[entity] == start and manhattan_distance(start, end) == 1:
+    if not occupied(state, end) and state.loc[entity] == start and manhattan_distance(start, end) == 1:
         state.loc[entity] = end
         return state
 
@@ -62,11 +62,24 @@ def put_down(state, bot, item):
         return state
 
 
+def deliver(state, item, end):
+    if state.loc[item] == end:
+        return TaskList(completed=True)
+    else:
+        task_list = []
+        for entity in state.robots:
+            task_list.append([('find_route', entity, state.loc[entity], state.loc[item]),
+                              ('pick_up', entity, item),
+                              ('find_route', entity, state.loc[item], end),
+                              ('put_down', entity, item)])
+        return TaskList(task_list)
+
+
 def find_route(state, entity, start, end):
     current_distance = manhattan_distance(start, end)
     if start == end:
         return TaskList(completed=True)
-    elif current_distance == 1:
+    elif current_distance == 1 and not occupied(state, end):
         return TaskList([('go', entity, start, end)])
     else:
         return TaskList([[('go', entity, start, neighbor),
@@ -75,24 +88,18 @@ def find_route(state, entity, start, end):
                          if manhattan_distance(neighbor, end) < current_distance])
 
 
-def deliver(state, item, end):
-    if state.loc[item] == end:
-        return TaskList(completed=True)
-    else:
-        return TaskList([('find_route', 'robot1', state.loc['robot1'], state.loc[item]),
-                         ('pick_up', 'robot1', item),
-                         ('find_route', 'robot1', state.loc[item], end),
-                         ('put_down', 'robot1', item)])
-
-
 def random_coord(width, height):
     return random.randint(0, width), random.randint(0, height)
 
 
-def problem_generator(width, height, num_packages):
-    state = State('warehouse')
-    state.loc = {'robot1': (0, 0)}
-    state.robots = ['robot1']
+def problem_generator(width, height, num_packages, num_robots):
+    state = State('3rd-floor')
+    state.loc = {}
+    state.robots = []
+    for robot in range(num_robots):
+        name = f'robot{robot + 1}'
+        state.robots.append(name)
+        state.loc[name] = random_coord(width, height)
     tasks = []
     for package in range(num_packages):
         name = f'package{package + 1}'
