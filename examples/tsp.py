@@ -1,4 +1,4 @@
-from pyhop_anytime import State, TaskList, Planner
+from pyhop_anytime import State, TaskList, Planner, MonteCarloPlannerHeap
 import random
 import math
 
@@ -47,8 +47,18 @@ def tsp_planner():
     return planner
 
 
+def summarize(header, plans):
+    print(f"{header}: {len(plans)} plans")
+    print(f"First cost {plans[0][1]}\ttime {plans[0][2]}")
+    print(f"Last  cost {plans[-1][1]}\ttime {plans[-1][2]}")
+
+
 if __name__ == '__main__':
     p = tsp_planner()
     s, t = make_metric_tsp_state(10, 200, 200)
-    print(p.anyhop(s, t, max_seconds=3))
-    print(p.anyhop_random(s, t, max_seconds=3))
+    summarize("DFS", p.anyhop(s, t, max_seconds=3))
+    summarize("Random", p.anyhop_random(s, t, max_seconds=3))
+    summarize("MC", p.anyhop(s, t, max_seconds=3, queue_init=lambda: MonteCarloPlannerHeap(p, go_deep_first=False)))
+    summarize("MC go deep", p.anyhop(s, t, max_seconds=3, queue_init=lambda: MonteCarloPlannerHeap(p, go_deep_first=True)))
+
+
