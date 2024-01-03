@@ -31,8 +31,14 @@ plan_times = planner.anyhop_random(state3, [('move_blocks', goal3)], max_seconds
 print(f"{len(plan_times)} plans")
 print([(plan[1], plan[2]) for plan in plan_times])
 
-print("monte carlo for 10 seconds:")
-plan_times = planner.anyhop(state3, [('move_blocks', goal3)], max_seconds=10,
-                            queue_init=lambda: MonteCarloPlannerHeap(planner))
+print("monte carlo (exhaustive) for 5 seconds:")
+plan_times = planner.anyhop(state3, [('move_blocks', goal3)], max_seconds=5,
+                            queue_init=lambda: MonteCarloPlannerHeap(planner, go_deep_first=False))
+print(f"{len(plan_times)} plans")
+print([(plan[1], plan[2]) for plan in plan_times])
+
+print("monte carlo (go deep first) for 5 seconds:")
+plan_times = planner.anyhop(state3, [('move_blocks', goal3)], max_seconds=5,
+                            queue_init=lambda: MonteCarloPlannerHeap(planner, go_deep_first=True))
 print(f"{len(plan_times)} plans")
 print([(plan[1], plan[2]) for plan in plan_times])

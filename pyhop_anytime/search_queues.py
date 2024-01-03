@@ -61,23 +61,53 @@ class HybridQueue:
 
 
 class MonteCarloPlannerHeap:
-    def __init__(self, planner, num_samples=10):
+    def __init__(self, planner, num_samples=10, go_deep_first=True):
         self.planner = planner
         self.num_samples = num_samples
         self.plan_step_heap = []
+        self.current = None
+        self.go_deep_first = go_deep_first
 
     def enqueue_all_steps(self, items):
+        item_ratings = []
         for plan_step in items:
             options = self.planner.n_random(plan_step.state, plan_step.tasks, self.num_samples)
             costs = [plan[1] for plan in options]
             rating = sum(costs) / len(costs)
-            heapq.heappush(self.plan_step_heap, RatedPlanStep(plan_step, rating))
+            item_ratings.append(rating)
+
+        lowest = 0
+        for i in range(1, len(items)):
+            if item_ratings[i] < item_ratings[lowest]:
+                lowest = i
+
+        for i in range(len(items)):
+            step = RatedPlanStep(items[i], item_ratings[i])
+            if self.go_deep_first and i == lowest:
+                self.current = step
+            else:
+                heapq.heappush(self.plan_step_heap, step)
 
     def dequeue_step(self):
-        return heapq.heappop(self.plan_step_heap).step
+        if self.current is None:
+            if self.go_deep_first: print("from heap")
+            popped = heapq.heappop(self.plan_step_heap).step
+            print(f"From heap (depth {popped.depth()})", end='')
+            if popped.complete():
+                print("Complete!")
+            else:
+                print("In progress...")
+            return popped
+            #return heapq.heappop(self.plan_step_heap).step
+        else:
+            result = self.current.step
+            if result.complete():
+                print(f"Current step: Completed cost: {result.total_cost}")
+            self.current = None
+            return result
 
     def empty(self):
-        return len(self.plan_step_heap) == 0
+        return self.current is None and len(self.plan_step_heap) == 0
 
 
 @total_ordering
