@@ -156,7 +156,7 @@ class Planner:
             if len(successors) == 0 or max_cost is not None and candidate.total_cost >= max_cost:
                 return None
             candidate = successors[random.randint(0, len(successors) - 1)]
-        return candidate.plan, candidate.total_cost
+        return candidate
 
     def anyhop_random(self, state, tasks, max_seconds, verbose=0):
         self.verbose = verbose
@@ -165,11 +165,11 @@ class Planner:
         max_cost = None
         plan_times = []
         while elapsed_time < max_seconds:
-            plan = self.randhop(state, tasks, max_cost=max_cost)
+            plan_step = self.randhop(state, tasks, max_cost=max_cost)
             elapsed_time = time.time() - start_time
-            if plan is not None:
-                plan_times.append((plan[0], plan[1], elapsed_time))
-                max_cost = plan[1]
+            if plan_step is not None:
+                plan_times.append((plan_step.plan, plan_step.total_cost, elapsed_time))
+                max_cost = plan_step.total_cost
         return plan_times
 
     def n_random(self, state, tasks, n, verbose=0):

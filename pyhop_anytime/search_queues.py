@@ -73,7 +73,7 @@ class MonteCarloPlannerHeap:
         ratings = []
         for plan_step in items:
             options = self.planner.n_random(plan_step.state, plan_step.tasks, self.num_samples)
-            costs = [plan[1] for plan in options]
+            costs = [plan.total_cost for plan in options]
             ratings.append(sum(costs) / len(costs))
 
         lowest = 0
