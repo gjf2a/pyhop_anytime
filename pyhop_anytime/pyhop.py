@@ -198,11 +198,12 @@ class Planner:
             final_plan_step = plan_steps[-1]
             if final_plan_step is not None:
                 for plan_step in plan_steps:
-                    step_costs.add(plan_step, final_plan_step.total_cost)
+                    step_costs.add(plan_step, final_plan_step.total_cost - plan_step.total_cost)
                 if max_cost is None or final_plan_step.total_cost < max_cost:
                     plan_times.append((final_plan_step.plan, final_plan_step.total_cost, elapsed_time))
                     max_cost = final_plan_step.total_cost
-        print(f"awr attempts: {attempts}")
+        num_repeats = len([key for key, value in step_costs.table.items() if value.count > 1])
+        print(f"awr attempts: {attempts} (table entries: {len(step_costs.table)} repeats: {num_repeats})")
         return plan_times
 
     def anyhop_random(self, state, tasks, max_seconds, verbose=0):
