@@ -158,17 +158,17 @@ class Planner:
             candidate = successors[random.randint(0, len(successors) - 1)]
         return candidate
 
-    def weighted_randhop_steps(self, state, tasks, step_costs, max_cost=None, verbose=0):
+    def weighted_randhop_steps(self, state, tasks, step_costs, show, max_cost=None, verbose=0):
         self.verbose = verbose
         steps = [PlanStep([], tasks, state, self.copy_func, self.cost_func)]
         while not (steps[-1] is None or steps[-1].complete()):
             successors = steps[-1].successors(self)
             if len(successors) == 0 or max_cost is not None and steps[-1].total_cost >= max_cost:
                 return None
-            steps.append(step_costs.random_pick_from(successors))
+            steps.append(step_costs.random_pick_from(successors, show))
         return steps
 
-    def anyhop_weighted_random(self, state, tasks, max_seconds, verbose=0):
+    def anyhop_weighted_random(self, state, tasks, max_seconds, show=False, verbose=0):
         start_time = time.time()
         elapsed_time = 0
         max_cost = None
@@ -176,7 +176,7 @@ class Planner:
         step_costs = PlanStepTable()
         attempts = 0
         while elapsed_time < max_seconds:
-            plan_steps = self.weighted_randhop_steps(state, tasks, step_costs, verbose=verbose)
+            plan_steps = self.weighted_randhop_steps(state, tasks, step_costs, show, verbose=verbose)
             elapsed_time = time.time() - start_time
             attempts += 1
             final_plan_step = plan_steps[-1]
@@ -309,14 +309,30 @@ class PlanStepTable:
     def cost_for(self, plan_step):
         return self.table.get(plan_step_key(plan_step))
 
-    def random_pick_from(self, successors):
+    def random_pick_from(self, successors, show):
+        if len(successors) == 1:
+            return successors[0]
         d = self.distribution_for(successors)
+        for i in range(len(successors)):
+            for j in range(i + 1, len(successors)):
+                if d[i] != d[j]:
+                    show = True
+        if show:
+            print("Successor tasks")
+            for s in successors:
+                print(f"Plan: {s.plan} Tasks: {s.tasks}")
+            print("distribution")
+            print(d)
         r = random.random()
+        if show: print(f"starting r: {r}")
         for (i, share) in d.items():
+            if show: print(f"{i} {share}")
             if share > r:
+                if show: print("returning")
                 return successors[i]
             else:
                 r -= share
+                if show: print(f"Updated r: {r}")
         assert False
 
     def distribution_for(self, successors):
