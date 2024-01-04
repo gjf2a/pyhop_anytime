@@ -158,31 +158,15 @@ class Planner:
             candidate = successors[random.randint(0, len(successors) - 1)]
         return candidate
 
-    def weighted_randhop_steps(self, state, tasks, max_cost=None, verbose=0):
+    def weighted_randhop_steps(self, state, tasks, step_costs, max_cost=None, verbose=0):
         self.verbose = verbose
         steps = [PlanStep([], tasks, state, self.copy_func, self.cost_func)]
         while not (steps[-1] is None or steps[-1].complete()):
             successors = steps[-1].successors(self)
             if len(successors) == 0 or max_cost is not None and steps[-1].total_cost >= max_cost:
                 return None
-            steps.append(successors[random.randint(0, len(successors) - 1)])
+            steps.append(step_costs.random_pick_from(successors))
         return steps
-
-    # randhop() alternative:
-    #
-    # Track the relative quality of each choice made at a given step.
-    #
-    # When we encounter that step again, build a probability distribution of the alternatives
-    # that uses that relative quality when randomly selecting a successor.
-    #
-    # Come up with a scheme to allow representing steps as tuples of integers. This will
-    # let us easily use a dictionary to store the histograms.
-    #
-    # Motivation:
-    # * Pure random is **much** faster than the MC approaches.
-    # * The MC approaches generally produce better results.
-    # * This seems like an in-between point - informed by outcomes but should be almost as fast
-    #   as the pure random.
 
     def anyhop_weighted_random(self, state, tasks, max_seconds, verbose=0):
         start_time = time.time()
@@ -192,7 +176,7 @@ class Planner:
         step_costs = PlanStepTable()
         attempts = 0
         while elapsed_time < max_seconds:
-            plan_steps = self.weighted_randhop_steps(state, tasks, verbose=verbose)
+            plan_steps = self.weighted_randhop_steps(state, tasks, step_costs, verbose=verbose)
             elapsed_time = time.time() - start_time
             attempts += 1
             final_plan_step = plan_steps[-1]
@@ -202,8 +186,6 @@ class Planner:
                 if max_cost is None or final_plan_step.total_cost < max_cost:
                     plan_times.append((final_plan_step.plan, final_plan_step.total_cost, elapsed_time))
                     max_cost = final_plan_step.total_cost
-        num_repeats = len([key for key, value in step_costs.table.items() if value.count > 1])
-        print(f"awr attempts: {attempts} (table entries: {len(step_costs.table)} repeats: {num_repeats})")
         return plan_times
 
     def anyhop_random(self, state, tasks, max_seconds, verbose=0):
@@ -219,7 +201,6 @@ class Planner:
             if plan_step is not None and (max_cost is None or plan_step.total_cost < max_cost):
                 plan_times.append((plan_step.plan, plan_step.total_cost, elapsed_time))
                 max_cost = plan_step.total_cost
-        print(f"ar attempts: {attempts}")
         return plan_times
 
     def n_random(self, state, tasks, n, verbose=0):
@@ -300,6 +281,9 @@ class OutcomeCounter:
         self.min = None
         self.max = None
 
+    def __str__(self):
+        return f"{self.mean()} [{self.min}, {self.max}]"
+
     def record(self, outcome):
         self.total += outcome
         self.count += 1
@@ -324,6 +308,39 @@ class PlanStepTable:
 
     def cost_for(self, plan_step):
         return self.table.get(plan_step_key(plan_step))
+
+    def random_pick_from(self, successors):
+        d = self.distribution_for(successors)
+        r = random.random()
+        for (i, share) in d.items():
+            if share > r:
+                return successors[i]
+            else:
+                r -= share
+        assert False
+
+    def distribution_for(self, successors):
+        outcomes = [self.cost_for(s) for s in successors]
+        rankable = {i for i in range(len(outcomes)) if outcomes[i] is not None}
+        if len(rankable) > 1:
+            rankings = [(outcomes[i].mean(), i) for i in rankable]
+            rankings.sort(key=lambda k: k[0])
+            rankable_budget = len(rankable) / len(outcomes)
+            distribution = {}
+            if len(rankable) < len(outcomes):
+                unrankable_share = (1.0 - rankable_budget) / (len(outcomes) - len(rankable))
+                for i in range(len(outcomes)):
+                    if i not in rankable:
+                        distribution[i] = unrankable_share
+            rankable_share = 2 * rankable_budget / (len(rankings) * (len(rankings) + 1))
+            for (r_i, (m, i)) in enumerate(rankings):
+                distribution[i] = rankable_share * (len(rankings) - r_i)
+            assert len(distribution) == len(successors)
+            return distribution
+        else:
+            share = 1.0 / len(successors)
+            return {i: share for i in range(len(successors))}
+
 
 ############################################################
 # Helper functions that may be useful in domain models
