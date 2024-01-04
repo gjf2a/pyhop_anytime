@@ -17,13 +17,11 @@ def make_metric_tsp_state(num_cities, width, height):
     state.distances = [[euclidean_distance(state.locations[i], state.locations[j]) for j in range(num_cities)] for i in range(num_cities)]
     state.at = 0
     state.visited = {}
-    state.tour_cost = 0
     return state, [('nondeterministic_choice',)]
 
 
 def move(state, new_city):
     if new_city not in state.visited:
-        state.tour_cost += state.distances[state.at][new_city]
         state.visited[new_city] = state.distances[state.at][new_city]
         state.at = new_city
         return state
@@ -49,8 +47,8 @@ def tsp_planner():
 
 def summarize(header, plans):
     print(f"{header}: {len(plans)} plans")
-    print(f"First cost {plans[0][1]}\ttime {plans[0][2]}")
-    print(f"Last  cost {plans[-1][1]}\ttime {plans[-1][2]}")
+    print(f"First cost {plans[0][1]:7.2f}\ttime {plans[0][2]:4.2f}")
+    print(f"Last cost  {plans[-1][1]:7.2f}\ttime {plans[-1][2]:4.2f}")
 
 
 if __name__ == '__main__':
@@ -58,6 +56,7 @@ if __name__ == '__main__':
     s, t = make_metric_tsp_state(10, 200, 200)
     summarize("DFS", p.anyhop(s, t, max_seconds=3))
     summarize("Random", p.anyhop_random(s, t, max_seconds=3))
+    summarize("Weighted Random", p.anyhop_weighted_random(s, t, max_seconds=3))
     summarize("MC", p.anyhop(s, t, max_seconds=3, queue_init=lambda: MonteCarloPlannerHeap(p, go_deep_first=False)))
     summarize("MC go deep", p.anyhop(s, t, max_seconds=3, queue_init=lambda: MonteCarloPlannerHeap(p, go_deep_first=True)))
 

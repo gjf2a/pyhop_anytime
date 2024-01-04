@@ -158,18 +158,67 @@ class Planner:
             candidate = successors[random.randint(0, len(successors) - 1)]
         return candidate
 
-    def anyhop_random(self, state, tasks, max_seconds, verbose=0):
+    def weighted_randhop_steps(self, state, tasks, max_cost=None, verbose=0):
         self.verbose = verbose
+        steps = [PlanStep([], tasks, state, self.copy_func, self.cost_func)]
+        while not (steps[-1] is None or steps[-1].complete()):
+            successors = steps[-1].successors(self)
+            if len(successors) == 0 or max_cost is not None and steps[-1].total_cost >= max_cost:
+                return None
+            steps.append(successors[random.randint(0, len(successors) - 1)])
+        return steps
+
+    # randhop() alternative:
+    #
+    # Track the relative quality of each choice made at a given step.
+    #
+    # When we encounter that step again, build a probability distribution of the alternatives
+    # that uses that relative quality when randomly selecting a successor.
+    #
+    # Come up with a scheme to allow representing steps as tuples of integers. This will
+    # let us easily use a dictionary to store the histograms.
+    #
+    # Motivation:
+    # * Pure random is **much** faster than the MC approaches.
+    # * The MC approaches generally produce better results.
+    # * This seems like an in-between point - informed by outcomes but should be almost as fast
+    #   as the pure random.
+
+    def anyhop_weighted_random(self, state, tasks, max_seconds, verbose=0):
         start_time = time.time()
         elapsed_time = 0
         max_cost = None
         plan_times = []
+        step_costs = PlanStepTable()
+        attempts = 0
         while elapsed_time < max_seconds:
-            plan_step = self.randhop(state, tasks, max_cost=max_cost)
+            plan_steps = self.weighted_randhop_steps(state, tasks, verbose=verbose)
             elapsed_time = time.time() - start_time
+            attempts += 1
+            final_plan_step = plan_steps[-1]
+            if final_plan_step is not None:
+                for plan_step in plan_steps:
+                    step_costs.add(plan_step, final_plan_step.total_cost)
+                if max_cost is None or final_plan_step.total_cost < max_cost:
+                    plan_times.append((final_plan_step.plan, final_plan_step.total_cost, elapsed_time))
+                    max_cost = final_plan_step.total_cost
+        print(f"awr attempts: {attempts}")
+        return plan_times
+
+    def anyhop_random(self, state, tasks, max_seconds, verbose=0):
+        start_time = time.time()
+        elapsed_time = 0
+        max_cost = None
+        plan_times = []
+        attempts = 0
+        while elapsed_time < max_seconds:
+            plan_step = self.randhop(state, tasks, max_cost=max_cost, verbose=verbose)
+            elapsed_time = time.time() - start_time
+            attempts += 1
             if plan_step is not None and (max_cost is None or plan_step.total_cost < max_cost):
                 plan_times.append((plan_step.plan, plan_step.total_cost, elapsed_time))
                 max_cost = plan_step.total_cost
+        print(f"ar attempts: {attempts}")
         return plan_times
 
     def n_random(self, state, tasks, n, verbose=0):
@@ -237,6 +286,43 @@ class PlanStep:
             return result
         else:
             return tuple([result])
+
+
+def plan_step_key(plan_step):
+    return f"{plan_step.state}:{plan_step.tasks}"
+
+
+class OutcomeCounter:
+    def __init__(self):
+        self.total = 0
+        self.count = 0
+        self.min = None
+        self.max = None
+
+    def record(self, outcome):
+        self.total += outcome
+        self.count += 1
+        if self.min is None or self.min > outcome:
+            self.min = outcome
+        if self.max is None or self.max < outcome:
+            self.max = outcome
+
+    def mean(self):
+        return self.total / self.count
+
+
+class PlanStepTable:
+    def __init__(self):
+        self.table = {}
+
+    def add(self, plan_step, final_plan_cost):
+        key = plan_step_key(plan_step)
+        if key not in self.table:
+            self.table[key] = OutcomeCounter()
+        self.table[key].record(final_plan_cost)
+
+    def cost_for(self, plan_step):
+        return self.table.get(plan_step_key(plan_step))
 
 ############################################################
 # Helper functions that may be useful in domain models

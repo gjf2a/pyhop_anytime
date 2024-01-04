@@ -125,7 +125,7 @@ def nondeterministic_delivery(state, tasks):
 def warehouse_planner():
     planner = Planner()
     planner.declare_operators(go, pick_up, put_down)
-    planner.declare_methods(find_route, deliver)
+    planner.declare_methods(nondeterministic_delivery, find_route, deliver)
     return planner
 
 
@@ -135,4 +135,5 @@ if __name__ == '__main__':
     state.robots = ['robot1']
     state.loc = {'robot1': (0, 0), 'package1': (-2, 1), 'package2': (-1, 1)}
 
-    print(planner.anyhop(state, [('deliver', 'package1', (0, 0))]))
+    print(planner.anyhop(state, [('nondeterministic_delivery',
+                                  [('deliver', 'package1', (0, 0)), ('deliver', 'package2', (0, 0))])], verbose=3))
