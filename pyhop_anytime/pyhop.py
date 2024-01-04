@@ -164,6 +164,7 @@ class Planner:
     #
     # What if, instead, we generate a bunch of plans (say, 10-50, or maybe calculated somehow based on lengths).
     # We then look at every first-plan-step, and for each one we find the average plan cost.
+    # Note that for best results we need to disable max-cost pruning.
     #
     # We now restart the problem using the state after that best-first-plan-step as the starting point, and repeat
     # the process for what is in effect the second plan step.
