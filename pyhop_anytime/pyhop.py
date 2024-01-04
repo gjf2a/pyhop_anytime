@@ -158,6 +158,22 @@ class Planner:
             candidate = successors[random.randint(0, len(successors) - 1)]
         return candidate
 
+    # New idea to consider
+    #
+    # The weighted-random stored too much data and didn't even do that well.
+    #
+    # What if, instead, we generate a bunch of plans (say, 10-50, or maybe calculated somehow based on lengths).
+    # We then look at every first-plan-step, and for each one we find the average plan cost.
+    #
+    # We now restart the problem using the state after that best-first-plan-step as the starting point, and repeat
+    # the process for what is in effect the second plan step.
+    #
+    # Of course, we save all the best-seen plans along the way.
+    #
+    # Once we have a "best" that has no tasks remaining, we exit.
+    #
+    # This seems like it should be a lot cheaper than weighted-random.
+
     def weighted_randhop_steps(self, state, tasks, step_costs, show, max_cost=None, verbose=0):
         self.verbose = verbose
         steps = [PlanStep([], tasks, state, self.copy_func, self.cost_func)]
