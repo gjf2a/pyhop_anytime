@@ -188,7 +188,7 @@ class Planner:
                     max_cost = final_plan_step.total_cost
         return plan_times
 
-    def anyhop_random(self, state, tasks, max_seconds, verbose=0):
+    def anyhop_random(self, state, tasks, max_seconds, use_max_cost=True, verbose=0):
         start_time = time.time()
         elapsed_time = 0
         max_cost = None
@@ -200,7 +200,8 @@ class Planner:
             attempts += 1
             if plan_step is not None and (max_cost is None or plan_step.total_cost < max_cost):
                 plan_times.append((plan_step.plan, plan_step.total_cost, elapsed_time))
-                max_cost = plan_step.total_cost
+                if use_max_cost:
+                    max_cost = plan_step.total_cost
         return plan_times
 
     def n_random(self, state, tasks, n, verbose=0):
