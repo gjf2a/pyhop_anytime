@@ -72,7 +72,7 @@ class MonteCarloPlannerHeap:
     def enqueue_all_steps(self, items):
         rated_steps = []
         for plan_step in items:
-            options = self.planner.n_random(plan_step.state, plan_step.tasks, self.num_samples)
+            options = self.planner.n_random(plan_step.state, plan_step.start_tasks, self.num_samples)
             if len(options) > 0:
                 costs = [plan.total_cost for plan in options]
                 rating = sum(costs) / len(costs)

@@ -165,7 +165,6 @@ class Planner:
         self.verbose = verbose
         steps = [PlanStep([], tasks, state, self.copy_func, self.cost_func)]
         while not (steps[-1] is None or steps[-1].complete()):
-            print(f"steps[-1]: {steps[-1].plan}\n{steps[-1].state}\n{steps[-1].tasks}")
             successors = steps[-1].successors(self)
             if len(successors) == 0:
                 return None

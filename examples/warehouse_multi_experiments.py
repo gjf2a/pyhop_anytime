@@ -3,8 +3,8 @@ from pyhop_anytime.pyhop import *
 import sys
 
 if __name__ == '__main__':
-    num_packages = 18#3
-    num_robots = 2#2
+    num_packages = 3#18#3
+    num_robots = 2
     max_seconds = 5
     for arg in sys.argv:
         if arg.startswith("-robot"):

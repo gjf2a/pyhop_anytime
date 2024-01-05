@@ -2,10 +2,10 @@ import time
 
 
 class IncrementalRandomTracker:
-    def __init__(self, planner, tasks, start_state, min_avg_plan_step_count, show_incremental=False):
+    def __init__(self, planner, tasks, state, min_avg_plan_step_count, show_incremental=False):
         self.planner = planner
-        self.tasks = tasks
-        self.start_state = start_state
+        self.start_tasks = tasks
+        self.start_state = state
         self.min_avg_plan_step_count = min_avg_plan_step_count
         self.show_incremental = show_incremental
         self.attempts = 0
@@ -18,6 +18,7 @@ class IncrementalRandomTracker:
         self.plan_prefix = []
         self.prefix_cost = 0
         self.state = self.start_state
+        self.tasks = self.start_tasks
         self.partial_reset()
 
     # noinspection PyAttributeOutsideInit
@@ -25,6 +26,7 @@ class IncrementalRandomTracker:
         self.first_action_outcomes = {}
         self.first_action_states = {}
         self.first_action_costs = {}
+        self.first_action_tasks = {}
         self.current_first_actions = 0
 
     def log(self, msg):
@@ -66,6 +68,7 @@ class IncrementalRandomTracker:
                 action_step += 1
             self.first_action_states[prefix] = plan_steps[action_step + 1].state
             self.first_action_costs[prefix] = plan_steps[action_step + 1].current_cost
+            self.first_action_tasks[prefix] = plan_steps[action_step + 1].tasks
         self.first_action_outcomes[prefix].record(plan_steps[-1].total_cost + self.prefix_cost)
         self.current_first_actions += 1
 
@@ -84,6 +87,7 @@ class IncrementalRandomTracker:
         self.log(f"chose {lowest_cost_step}")
         self.prefix_cost += self.first_action_costs[lowest_cost_step]
         self.state = self.first_action_states[lowest_cost_step]
+        self.tasks = self.first_action_tasks[lowest_cost_step]
         self.partial_reset()
 
 
