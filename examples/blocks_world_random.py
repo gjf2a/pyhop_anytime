@@ -32,32 +32,7 @@ plan_times = planner.anyhop_random(state3, [('move_blocks', goal3)], max_seconds
 print(f"{len(plan_times)} plans")
 print([(plan[1], plan[2]) for plan in plan_times])
 
-show_progress = input("Show progress? (y/n) ").lower()[0] == 'y'
-
-print("monte carlo (exhaustive) for 5 seconds:")
-plan_times = planner.anyhop(state3, [('move_blocks', goal3)], max_seconds=5,
-                            queue_init=lambda: MonteCarloPlannerHeap(planner, go_deep_first=False,
-                                                                     show_progress=show_progress))
-print(f"{len(plan_times)} plans")
-print([(plan[1], plan[2]) for plan in plan_times])
-
-print("monte carlo (go_deep_first) for 5 seconds:")
-plan_times = planner.anyhop(state3, [('move_blocks', goal3)], max_seconds=5,
-                            queue_init=lambda: MonteCarloPlannerHeap(planner, go_deep_first=True,
-                                                                     show_progress=show_progress))
-print(f"{len(plan_times)} plans")
-print([(plan[1], plan[2]) for plan in plan_times])
-
-print("monte carlo (exhaustive) for 5 seconds, 5 samples:")
-plan_times = planner.anyhop(state3, [('move_blocks', goal3)], max_seconds=5,
-                            queue_init=lambda: MonteCarloPlannerHeap(planner, num_samples=5, go_deep_first=False,
-                                                                     show_progress=show_progress))
-print(f"{len(plan_times)} plans")
-print([(plan[1], plan[2]) for plan in plan_times])
-
-print("monte carlo (go_deep_first) for 5 seconds, 5 samples:")
-plan_times = planner.anyhop(state3, [('move_blocks', goal3)], max_seconds=5,
-                            queue_init=lambda: MonteCarloPlannerHeap(planner, num_samples=5, go_deep_first=True,
-                                                                     show_progress=show_progress))
+print("anyhop_random_incremental() for two seconds:")
+plan_times = planner.anyhop_random_incremental(state3, [('move_blocks', goal3)], max_seconds=2.0)
 print(f"{len(plan_times)} plans")
 print([(plan[1], plan[2]) for plan in plan_times])
