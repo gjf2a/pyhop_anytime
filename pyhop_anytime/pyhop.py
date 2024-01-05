@@ -158,6 +158,16 @@ class Planner:
             candidate = successors[random.randint(0, len(successors) - 1)]
         return candidate
 
+    def randhop_steps(self, state, tasks, verbose=0):
+        self.verbose = verbose
+        steps = [PlanStep([], tasks, state, self.copy_func, self.cost_func)]
+        while not (steps[-1] is None or steps[-1].complete()):
+            successors = steps[-1].successors(self)
+            if len(successors) == 0:
+                return None
+            steps.append(successors[random.randint(0, len(successors) - 1)])
+        return steps
+
     # New idea to consider
     #
     # The weighted-random stored too much data and didn't even do that well.
@@ -221,6 +231,66 @@ class Planner:
             if plan_step is not None and (max_cost is None or plan_step.total_cost < max_cost):
                 plan_times.append((plan_step.plan, plan_step.total_cost, elapsed_time))
                 max_cost = plan_step.total_cost
+        print(f"attempts: {attempts}")
+        return plan_times
+
+    def anyhop_random_incremental(self, state, tasks, max_seconds, min_avg_plan_step_count, verbose=0):
+        start_time = time.time()
+        elapsed_time = 0
+        max_cost = None
+        plan_times = []
+        plan_prefix = []
+        prefix_cost = 0
+        first_action_outcomes = {}
+        first_action_states = {}
+        first_action_costs = {}
+        current_first_actions = 0
+        attempts = 0
+        while elapsed_time < max_seconds:
+            plan_steps = self.randhop_steps(state, tasks, verbose=verbose)
+            elapsed_time = time.time() - start_time
+            #print(f"{len(plan_steps)}")
+            #print(f"{len(plan_steps[-1].plan)}")
+            if len(plan_steps[-1].plan) == 0:
+                print("Nothing more to do")
+                break
+            prefix = plan_steps[-1].plan[0]
+            if prefix not in first_action_outcomes:
+                first_action_outcomes[prefix] = OutcomeCounter()
+                action_step = 0
+                while plan_steps[action_step].tasks[0] != prefix:
+                    action_step += 1
+                first_action_states[prefix] = plan_steps[action_step + 1].state
+                first_action_costs[prefix] = plan_steps[action_step + 1].current_cost
+                #print(f"prefix: {prefix} ({first_action_costs[prefix]})")
+                #for i, step in enumerate(plan_steps):
+                    #print(f"{i}: {plan_steps[i].current_cost} {plan_steps[i].total_cost} {plan_steps[i].tasks}")
+            first_action_outcomes[prefix].record(plan_steps[-1].total_cost + prefix_cost)
+            current_first_actions += 1
+            if current_first_actions / len(first_action_outcomes) >= min_avg_plan_step_count:
+                #print("Picking first action...")
+                #for (action, outcome) in first_action_outcomes.items():
+                #    print(f"{action}: {outcome} ({outcome.count})")
+                lowest_cost = None
+                lowest_cost_step = None
+                for (first_step, outcome) in first_action_outcomes.items():
+                    if lowest_cost is None or outcome.mean() < lowest_cost:
+                        lowest_cost_step = first_step
+                        lowest_cost = outcome.mean()
+                plan_prefix.append(lowest_cost_step)
+                prefix_cost += first_action_costs[lowest_cost_step]
+                state = first_action_states[lowest_cost_step]
+                first_action_outcomes = {}
+                first_action_states = {}
+                first_action_costs = {}
+                current_first_actions = 0
+                #print(f"Updated: {prefix_cost} {plan_prefix}")
+            attempts += 1
+            current_total_cost = prefix_cost + plan_steps[-1].total_cost
+            if plan_steps is not None and (max_cost is None or current_total_cost < max_cost):
+                plan_times.append(([plan_prefix] + plan_steps[-1].plan, current_total_cost, elapsed_time))
+                max_cost = current_total_cost
+        print(f"attempts: {attempts}")
         return plan_times
 
     def n_random(self, state, tasks, n, verbose=0):
@@ -295,14 +365,17 @@ def plan_step_key(plan_step):
 
 
 class OutcomeCounter:
-    def __init__(self):
-        self.total = 0
-        self.count = 0
-        self.min = None
-        self.max = None
+    def __init__(self, total=0, count=0, min=None, max=None):
+        self.total = total
+        self.count = count
+        self.min = min
+        self.max = max
 
     def __str__(self):
         return f"{self.mean()} [{self.min}, {self.max}]"
+
+    def __repr__(self):
+        return f"OutcomeCounter(total={self.total}, count={self.count}, min={self.min}, max={self.max})"
 
     def record(self, outcome):
         self.total += outcome

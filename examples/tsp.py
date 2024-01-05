@@ -53,10 +53,11 @@ def summarize(header, plans):
 
 if __name__ == '__main__':
     p = tsp_planner()
-    s, t = make_metric_tsp_state(50, 200, 200)
+    s, t = make_metric_tsp_state(20, 200, 200)
     summarize("DFS", p.anyhop(s, t, max_seconds=3))
     summarize("Random", p.anyhop_random(s, t, max_seconds=3))
     summarize("Random no-max", p.anyhop_random(s, t, use_max_cost=False, max_seconds=3))
+    summarize("Random incremental", p.anyhop_random_incremental(s, t, max_seconds=3, min_avg_plan_step_count=3))
     #summarize("Weighted Random", p.anyhop_weighted_random(s, t, max_seconds=3))
     #summarize("MC", p.anyhop(s, t, max_seconds=3, queue_init=lambda: MonteCarloPlannerHeap(p, go_deep_first=False)))
     #summarize("MC go deep", p.anyhop(s, t, max_seconds=3, queue_init=lambda: MonteCarloPlannerHeap(p, go_deep_first=True)))
