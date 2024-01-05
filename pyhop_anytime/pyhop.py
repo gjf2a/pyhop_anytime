@@ -234,7 +234,8 @@ class Planner:
         print(f"attempts: {attempts}")
         return plan_times
 
-    def anyhop_random_incremental(self, state, tasks, max_seconds, min_avg_plan_step_count, verbose=0):
+    def anyhop_random_incremental(self, state, tasks, max_seconds, min_avg_plan_step_count=2, verbose=0):
+        original_state = state
         start_time = time.time()
         elapsed_time = 0
         max_cost = None
@@ -249,11 +250,17 @@ class Planner:
         while elapsed_time < max_seconds:
             plan_steps = self.randhop_steps(state, tasks, verbose=verbose)
             elapsed_time = time.time() - start_time
-            #print(f"{len(plan_steps)}")
-            #print(f"{len(plan_steps[-1].plan)}")
             if len(plan_steps[-1].plan) == 0:
-                print("Nothing more to do")
-                break
+                min_avg_plan_step_count += 1
+                print(f"Reached end; updating min_avg_plan_step_count to {min_avg_plan_step_count}")
+                plan_prefix = []
+                prefix_cost = 0
+                first_action_outcomes = {}
+                first_action_states = {}
+                first_action_costs = {}
+                current_first_actions = 0
+                state = original_state
+                continue
             prefix = plan_steps[-1].plan[0]
             if prefix not in first_action_outcomes:
                 first_action_outcomes[prefix] = OutcomeCounter()
@@ -262,15 +269,9 @@ class Planner:
                     action_step += 1
                 first_action_states[prefix] = plan_steps[action_step + 1].state
                 first_action_costs[prefix] = plan_steps[action_step + 1].current_cost
-                #print(f"prefix: {prefix} ({first_action_costs[prefix]})")
-                #for i, step in enumerate(plan_steps):
-                    #print(f"{i}: {plan_steps[i].current_cost} {plan_steps[i].total_cost} {plan_steps[i].tasks}")
             first_action_outcomes[prefix].record(plan_steps[-1].total_cost + prefix_cost)
             current_first_actions += 1
             if current_first_actions / len(first_action_outcomes) >= min_avg_plan_step_count:
-                #print("Picking first action...")
-                #for (action, outcome) in first_action_outcomes.items():
-                #    print(f"{action}: {outcome} ({outcome.count})")
                 lowest_cost = None
                 lowest_cost_step = None
                 for (first_step, outcome) in first_action_outcomes.items():
@@ -284,7 +285,6 @@ class Planner:
                 first_action_states = {}
                 first_action_costs = {}
                 current_first_actions = 0
-                #print(f"Updated: {prefix_cost} {plan_prefix}")
             attempts += 1
             current_total_cost = prefix_cost + plan_steps[-1].total_cost
             if plan_steps is not None and (max_cost is None or current_total_cost < max_cost):
