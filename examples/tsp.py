@@ -21,6 +21,7 @@ def make_metric_tsp_state(num_cities, width, height):
 
 
 # Adapted from: https://reintech.io/blog/pythonic-way-of-implementing-kruskals-algorithm
+# In spite of what the author above says, this is actually Prim's Algorithm.
 def spanning_tree(tsp_state):
     num_cities = len(tsp_state.locations)
     edges = [(euclidean_distance(tsp_state.locations[0], tsp_state.locations[i]), 0, i)
