@@ -28,6 +28,8 @@ Copyright 2013 Dana S. Nau - http://www.cs.umd.edu/~nau
 
 import copy
 import time
+
+from pyhop_anytime.incremental_random import IncrementalRandomTracker
 from pyhop_anytime.search_queues import *
 import random
 
@@ -168,53 +170,6 @@ class Planner:
             steps.append(successors[random.randint(0, len(successors) - 1)])
         return steps
 
-    # New idea to consider
-    #
-    # The weighted-random stored too much data and didn't even do that well.
-    #
-    # What if, instead, we generate a bunch of plans (say, 10-50, or maybe calculated somehow based on lengths).
-    # We then look at every first-plan-step, and for each one we find the average plan cost.
-    # Note that for best results we need to disable max-cost pruning.
-    #
-    # We now restart the problem using the state after that best-first-plan-step as the starting point, and repeat
-    # the process for what is in effect the second plan step.
-    #
-    # Of course, we save all the best-seen plans along the way.
-    #
-    # Once we have a "best" that has no tasks remaining, we exit.
-    #
-    # This seems like it should be a lot cheaper than weighted-random.
-
-    def weighted_randhop_steps(self, state, tasks, step_costs, show, max_cost=None, verbose=0):
-        self.verbose = verbose
-        steps = [PlanStep([], tasks, state, self.copy_func, self.cost_func)]
-        while not (steps[-1] is None or steps[-1].complete()):
-            successors = steps[-1].successors(self)
-            if len(successors) == 0 or max_cost is not None and steps[-1].total_cost >= max_cost:
-                return None
-            steps.append(step_costs.random_pick_from(successors, show))
-        return steps
-
-    def anyhop_weighted_random(self, state, tasks, max_seconds, show=False, verbose=0):
-        start_time = time.time()
-        elapsed_time = 0
-        max_cost = None
-        plan_times = []
-        step_costs = PlanStepTable()
-        attempts = 0
-        while elapsed_time < max_seconds:
-            plan_steps = self.weighted_randhop_steps(state, tasks, step_costs, show, verbose=verbose)
-            elapsed_time = time.time() - start_time
-            attempts += 1
-            final_plan_step = plan_steps[-1]
-            if final_plan_step is not None:
-                for plan_step in plan_steps:
-                    step_costs.add(plan_step, final_plan_step.total_cost - plan_step.total_cost)
-                if max_cost is None or final_plan_step.total_cost < max_cost:
-                    plan_times.append((final_plan_step.plan, final_plan_step.total_cost, elapsed_time))
-                    max_cost = final_plan_step.total_cost
-        return plan_times
-
     def anyhop_random(self, state, tasks, max_seconds, use_max_cost=True, verbose=0):
         start_time = time.time()
         elapsed_time = 0
@@ -234,64 +189,9 @@ class Planner:
         print(f"attempts: {attempts}")
         return plan_times
 
-    def anyhop_random_incremental(self, state, tasks, max_seconds, min_avg_plan_step_count=2, verbose=0):
-        original_state = state
-        start_time = time.time()
-        elapsed_time = 0
-        max_cost = None
-        plan_times = []
-        plan_prefix = []
-        prefix_cost = 0
-        first_action_outcomes = {}
-        first_action_states = {}
-        first_action_costs = {}
-        current_first_actions = 0
-        attempts = 0
-        while elapsed_time < max_seconds:
-            plan_steps = self.randhop_steps(state, tasks, verbose=verbose)
-            elapsed_time = time.time() - start_time
-            if len(plan_steps[-1].plan) == 0:
-                min_avg_plan_step_count += 1
-                print(f"Reached end; updating min_avg_plan_step_count to {min_avg_plan_step_count}")
-                plan_prefix = []
-                prefix_cost = 0
-                first_action_outcomes = {}
-                first_action_states = {}
-                first_action_costs = {}
-                current_first_actions = 0
-                state = original_state
-                continue
-            prefix = plan_steps[-1].plan[0]
-            if prefix not in first_action_outcomes:
-                first_action_outcomes[prefix] = OutcomeCounter()
-                action_step = 0
-                while plan_steps[action_step].tasks[0] != prefix:
-                    action_step += 1
-                first_action_states[prefix] = plan_steps[action_step + 1].state
-                first_action_costs[prefix] = plan_steps[action_step + 1].current_cost
-            first_action_outcomes[prefix].record(plan_steps[-1].total_cost + prefix_cost)
-            current_first_actions += 1
-            if current_first_actions / len(first_action_outcomes) >= min_avg_plan_step_count:
-                lowest_cost = None
-                lowest_cost_step = None
-                for (first_step, outcome) in first_action_outcomes.items():
-                    if lowest_cost is None or outcome.mean() < lowest_cost:
-                        lowest_cost_step = first_step
-                        lowest_cost = outcome.mean()
-                plan_prefix.append(lowest_cost_step)
-                prefix_cost += first_action_costs[lowest_cost_step]
-                state = first_action_states[lowest_cost_step]
-                first_action_outcomes = {}
-                first_action_states = {}
-                first_action_costs = {}
-                current_first_actions = 0
-            attempts += 1
-            current_total_cost = prefix_cost + plan_steps[-1].total_cost
-            if plan_steps is not None and (max_cost is None or current_total_cost < max_cost):
-                plan_times.append(([plan_prefix] + plan_steps[-1].plan, current_total_cost, elapsed_time))
-                max_cost = current_total_cost
-        print(f"attempts: {attempts}")
-        return plan_times
+    def anyhop_random_incremental(self, state, tasks, max_seconds, verbose=0):
+        tracker = IncrementalRandomTracker(self, tasks, state)
+        return tracker.plan(max_seconds, verbose)
 
     def n_random(self, state, tasks, n, verbose=0):
         self.verbose = verbose
@@ -358,97 +258,6 @@ class PlanStep:
             return result
         else:
             return tuple([result])
-
-
-def plan_step_key(plan_step):
-    return f"{plan_step.state}:{plan_step.tasks}"
-
-
-class OutcomeCounter:
-    def __init__(self, total=0, count=0, min=None, max=None):
-        self.total = total
-        self.count = count
-        self.min = min
-        self.max = max
-
-    def __str__(self):
-        return f"{self.mean()} [{self.min}, {self.max}]"
-
-    def __repr__(self):
-        return f"OutcomeCounter(total={self.total}, count={self.count}, min={self.min}, max={self.max})"
-
-    def record(self, outcome):
-        self.total += outcome
-        self.count += 1
-        if self.min is None or self.min > outcome:
-            self.min = outcome
-        if self.max is None or self.max < outcome:
-            self.max = outcome
-
-    def mean(self):
-        return self.total / self.count
-
-
-class PlanStepTable:
-    def __init__(self):
-        self.table = {}
-
-    def add(self, plan_step, final_plan_cost):
-        key = plan_step_key(plan_step)
-        if key not in self.table:
-            self.table[key] = OutcomeCounter()
-        self.table[key].record(final_plan_cost)
-
-    def cost_for(self, plan_step):
-        return self.table.get(plan_step_key(plan_step))
-
-    def random_pick_from(self, successors, show):
-        if len(successors) == 1:
-            return successors[0]
-        d = self.distribution_for(successors)
-        for i in range(len(successors)):
-            for j in range(i + 1, len(successors)):
-                if d[i] != d[j]:
-                    show = True
-        if show:
-            print("Successor tasks")
-            for s in successors:
-                print(f"Plan: {s.plan} Tasks: {s.tasks}")
-            print("distribution")
-            print(d)
-        r = random.random()
-        if show: print(f"starting r: {r}")
-        for (i, share) in d.items():
-            if show: print(f"{i} {share}")
-            if share > r:
-                if show: print("returning")
-                return successors[i]
-            else:
-                r -= share
-                if show: print(f"Updated r: {r}")
-        assert False
-
-    def distribution_for(self, successors):
-        outcomes = [self.cost_for(s) for s in successors]
-        rankable = {i for i in range(len(outcomes)) if outcomes[i] is not None}
-        if len(rankable) > 1:
-            rankings = [(outcomes[i].mean(), i) for i in rankable]
-            rankings.sort(key=lambda k: k[0])
-            rankable_budget = len(rankable) / len(outcomes)
-            distribution = {}
-            if len(rankable) < len(outcomes):
-                unrankable_share = (1.0 - rankable_budget) / (len(outcomes) - len(rankable))
-                for i in range(len(outcomes)):
-                    if i not in rankable:
-                        distribution[i] = unrankable_share
-            rankable_share = 2 * rankable_budget / (len(rankings) * (len(rankings) + 1))
-            for (r_i, (m, i)) in enumerate(rankings):
-                distribution[i] = rankable_share * (len(rankings) - r_i)
-            assert len(distribution) == len(successors)
-            return distribution
-        else:
-            share = 1.0 / len(successors)
-            return {i: share for i in range(len(successors))}
 
 
 ############################################################
