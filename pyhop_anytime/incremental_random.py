@@ -24,7 +24,8 @@ class IncrementalRandomTracker:
             plan_steps = self.planner.randhop_steps(self.state, self.tasks, verbose=verbose)
             elapsed_time = time.time() - start_time
             if plan_steps is None or len(plan_steps[-1].plan) == 0:
-                self.min_avg_plan_step_count += 1
+                #self.min_avg_plan_step_count += 1
+                self.min_avg_plan_step_count *= 2
                 self.log(f"Reached end; updating min_avg_plan_step_count to {self.min_avg_plan_step_count}")
                 self.full_reset()
             else:
