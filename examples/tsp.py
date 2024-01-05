@@ -1,6 +1,7 @@
 from pyhop_anytime import State, TaskList, Planner, MonteCarloPlannerHeap
 import random
 import math
+import heapq
 
 
 def euclidean_distance(p1, p2):
@@ -17,6 +18,31 @@ def make_metric_tsp_state(num_cities, width, height):
     state.at = 0
     state.visited = {}
     return state, [('nondeterministic_choice',)]
+
+
+# Adapted from: https://reintech.io/blog/pythonic-way-of-implementing-kruskals-algorithm
+def spanning_tree(tsp_state):
+    num_cities = len(tsp_state.locations)
+    edges = [(euclidean_distance(tsp_state.locations[0], tsp_state.locations[i]), 0, i)
+             for i in range(1, num_cities)]
+    heapq.heapify(edges)
+    visited = {0}
+    mst = {}
+    mst_cost = 0
+
+    while edges:
+        cost, src, dest = heapq.heappop(edges)
+        if dest not in visited:
+            visited.add(dest)
+            mst[src] = dest
+            mst_cost += cost
+            for successor in range(num_cities):
+                if successor not in visited:
+                    heapq.heappush(edges, (euclidean_distance(tsp_state.locations[dest],
+                                                              tsp_state.locations[successor]),
+                                           dest,
+                                           successor))
+    return mst, mst_cost
 
 
 def move(state, new_city):
@@ -53,6 +79,7 @@ def summarize(header, plans):
 if __name__ == '__main__':
     p = tsp_planner()
     s, t = make_metric_tsp_state(25, 200, 200)
+    print(f"Minimum spanning tree: {spanning_tree(s)[1]}")
     max_seconds = 5
     summarize("DFS", p.anyhop(s, t, max_seconds=max_seconds))
     summarize("Random", p.anyhop_random(s, t, max_seconds=max_seconds))
