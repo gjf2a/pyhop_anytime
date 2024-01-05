@@ -2,12 +2,17 @@ import time
 
 
 class IncrementalRandomTracker:
-    def __init__(self, planner, tasks, start_state, min_avg_plan_step_count):
+    def __init__(self, planner, tasks, start_state, min_avg_plan_step_count, show_incremental=False):
         self.planner = planner
         self.tasks = tasks
         self.start_state = start_state
         self.min_avg_plan_step_count = min_avg_plan_step_count
+        self.show_incremental = show_incremental
         self.full_reset()
+
+    def log(self, msg):
+        if self.show_incremental:
+            print(msg)
 
     def plan(self, max_seconds, verbose=0):
         max_cost = None
@@ -20,7 +25,7 @@ class IncrementalRandomTracker:
             elapsed_time = time.time() - start_time
             if plan_steps is None or len(plan_steps[-1].plan) == 0:
                 self.min_avg_plan_step_count += 1
-                print(f"Reached end; updating min_avg_plan_step_count to {self.min_avg_plan_step_count}")
+                self.log(f"Reached end; updating min_avg_plan_step_count to {self.min_avg_plan_step_count}")
                 self.full_reset()
             else:
                 self.record_prefix(plan_steps)
@@ -31,7 +36,7 @@ class IncrementalRandomTracker:
                 if max_cost is None or current_total_cost < max_cost:
                     plan_times.append(([self.plan_prefix] + plan_steps[-1].plan, current_total_cost, elapsed_time))
                     max_cost = current_total_cost
-        print(f"attempts: {attempts}")
+        self.log(f"attempts: {attempts}")
         return plan_times
 
     # noinspection PyAttributeOutsideInit
@@ -72,7 +77,7 @@ class IncrementalRandomTracker:
                 lowest_cost_step = first_step
                 lowest_cost = outcome.mean()
         self.plan_prefix.append(lowest_cost_step)
-        print(f"chose {lowest_cost_step}")
+        self.log(f"chose {lowest_cost_step}")
         self.prefix_cost += self.first_action_costs[lowest_cost_step]
         self.state = self.first_action_states[lowest_cost_step]
         self.partial_reset()

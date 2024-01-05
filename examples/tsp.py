@@ -58,7 +58,7 @@ if __name__ == '__main__':
     summarize("DFS", p.anyhop(s, t, max_seconds=max_seconds))
     summarize("Random", p.anyhop_random(s, t, max_seconds=max_seconds))
     summarize("Random no-max", p.anyhop_random(s, t, use_max_cost=False, max_seconds=max_seconds))
-    summarize("Random incremental", p.anyhop_random_incremental(s, t, max_seconds=max_seconds))
+    summarize("Random incremental", p.anyhop_random_incremental(s, t, max_seconds=max_seconds, show_incremental=True))
     #summarize("MC", p.anyhop(s, t, max_seconds=3, queue_init=lambda: MonteCarloPlannerHeap(p, go_deep_first=False)))
     #summarize("MC go deep", p.anyhop(s, t, max_seconds=3, queue_init=lambda: MonteCarloPlannerHeap(p, go_deep_first=True)))
 

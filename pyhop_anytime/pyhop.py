@@ -190,8 +190,10 @@ class Planner:
         print(f"attempts: {attempts}")
         return plan_times
 
-    def anyhop_random_incremental(self, state, tasks, max_seconds, min_avg_plan_step_count=2, verbose=0):
-        tracker = IncrementalRandomTracker(self, tasks, state, min_avg_plan_step_count)
+    def anyhop_random_incremental(self, state, tasks, max_seconds, min_avg_plan_step_count=2, verbose=0,
+                                  show_incremental=False):
+        tracker = IncrementalRandomTracker(self, tasks, state, min_avg_plan_step_count,
+                                           show_incremental=show_incremental)
         return tracker.plan(max_seconds, verbose)
 
     def n_random(self, state, tasks, n, verbose=0):
