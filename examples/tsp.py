@@ -64,7 +64,8 @@ def nondeterministic_choice(state):
 
 
 def tsp_planner():
-    planner = Planner(cost_func=lambda state, step: euclidean_distance(state.locations[state.at], state.locations[step[1]]))
+    planner = Planner(cost_func=lambda state, step: euclidean_distance(state.locations[state.at],
+                                                                       state.locations[step[1]]))
     planner.declare_operators(move)
     planner.declare_methods(nondeterministic_choice)
     return planner
@@ -76,10 +77,36 @@ def summarize(header, plans):
     print(f"Last cost  {plans[-1][1]:7.2f}\ttime {plans[-1][2]:4.2f}")
 
 
+# Experiment notes:
+#  With 25 cities, 5 seconds produces nice results for incremental random.
+#  With 50 cities, 5 seconds yields a length-7 prefix, and the results are indistinguishable from pure random.
+#    35 seconds yields 1 full reset and a length-15 prefix, but the results still aren't better.
+#    60 seconds yields 2 full resets and a length-3 prefix, and at that point the results improve a lot!
+#    * MST: 974.42
+#    * DFS: 5057.25
+#    * Random: 4124.67
+#    * Random no max: 3921.01
+#    * Random incremental: 3533.25, after 45 seconds (!)
+#
+# Hypothesis: min of 4 is simply better than 2, so if we switch from 2 to 3 it should do better.
+# Experiment: Start min at 3, then run for 30 seconds.
+# Results:
+# * MST: 983.72
+# * DFS: 5082.02
+# * Random: 4262.92
+#   2710 attempts
+# * Random no-max: 4210.91
+#   2748 attempts
+# * Random incremental: 3761.88
+#   * 1 full reset, 1 prefix step, 4000 attempts
+#
+# It looks like throwing in the prefix increases the number of attempts we can make, and in a more favorable part
+# of the search space as well.
+
 if __name__ == '__main__':
     p = tsp_planner()
     s, t = make_metric_tsp_state(25, 200, 200)
-    print(f"Minimum spanning tree: {spanning_tree(s)[1]}")
+    print(f"Minimum spanning tree: {spanning_tree(s)[1]:7.2f}")
     max_seconds = 5
     summarize("DFS", p.anyhop(s, t, max_seconds=max_seconds))
     summarize("Random", p.anyhop_random(s, t, max_seconds=max_seconds))
