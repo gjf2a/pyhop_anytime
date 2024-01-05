@@ -28,14 +28,14 @@ def spanning_tree(tsp_state):
              for i in range(1, num_cities)]
     heapq.heapify(edges)
     visited = {0}
-    mst = {}
+    mst = {i:[] for i in range(num_cities)}
     mst_cost = 0
 
     while edges:
         cost, src, dest = heapq.heappop(edges)
         if dest not in visited:
             visited.add(dest)
-            mst[src] = dest
+            mst[src].append(dest)
             mst_cost += cost
             for successor in range(num_cities):
                 if successor not in visited:
@@ -107,7 +107,8 @@ def summarize(header, mst_size, plans):
 if __name__ == '__main__':
     p = tsp_planner()
     s, t = make_metric_tsp_state(25, 200, 200)
-    mst_size = spanning_tree(s)[1]
+    mst, mst_size = spanning_tree(s)
+    print(mst)
     print(f"Minimum spanning tree: {mst_size:7.2f}")
     max_seconds = 5
     summarize("DFS", mst_size, p.anyhop(s, t, max_seconds=max_seconds))
