@@ -53,8 +53,8 @@ def summarize(header, plans):
 
 if __name__ == '__main__':
     p = tsp_planner()
-    s, t = make_metric_tsp_state(50, 200, 200)
-    max_seconds = 20
+    s, t = make_metric_tsp_state(25, 200, 200)
+    max_seconds = 5
     summarize("DFS", p.anyhop(s, t, max_seconds=max_seconds))
     summarize("Random", p.anyhop_random(s, t, max_seconds=max_seconds))
     summarize("Random no-max", p.anyhop_random(s, t, use_max_cost=False, max_seconds=max_seconds))
