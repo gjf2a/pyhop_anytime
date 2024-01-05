@@ -14,7 +14,6 @@ def random_coordinate(bound):
 def make_metric_tsp_state(num_cities, width, height):
     state = State(f"tsp_{num_cities}_cities_{width}x{height}")
     state.locations = [(random_coordinate(width), random_coordinate(height)) for i in range(num_cities)]
-    state.distances = [[euclidean_distance(state.locations[i], state.locations[j]) for j in range(num_cities)] for i in range(num_cities)]
     state.at = 0
     state.visited = {}
     return state, [('nondeterministic_choice',)]
@@ -22,7 +21,7 @@ def make_metric_tsp_state(num_cities, width, height):
 
 def move(state, new_city):
     if new_city not in state.visited:
-        state.visited[new_city] = state.distances[state.at][new_city]
+        state.visited[new_city] = True
         state.at = new_city
         return state
 
@@ -39,7 +38,7 @@ def nondeterministic_choice(state):
 
 
 def tsp_planner():
-    planner = Planner(cost_func=lambda state, step: state.distances[state.at][step[1]])
+    planner = Planner(cost_func=lambda state, step: euclidean_distance(state.locations[state.at], state.locations[step[1]]))
     planner.declare_operators(move)
     planner.declare_methods(nondeterministic_choice)
     return planner

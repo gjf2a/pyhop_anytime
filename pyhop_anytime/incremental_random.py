@@ -8,6 +8,7 @@ class IncrementalRandomTracker:
         self.start_state = start_state
         self.min_avg_plan_step_count = min_avg_plan_step_count
         self.show_incremental = show_incremental
+        self.attempts = 0
         self.full_reset()
 
     def log(self, msg):
@@ -16,7 +17,6 @@ class IncrementalRandomTracker:
 
     def plan(self, max_seconds, verbose=0):
         max_cost = None
-        attempts = 0
         plan_times = []
         start_time = time.time()
         elapsed_time = 0
@@ -24,7 +24,6 @@ class IncrementalRandomTracker:
             plan_steps = self.planner.randhop_steps(self.state, self.tasks, verbose=verbose)
             elapsed_time = time.time() - start_time
             if plan_steps is None or len(plan_steps[-1].plan) == 0:
-                #self.min_avg_plan_step_count += 1
                 self.min_avg_plan_step_count *= 2
                 self.log(f"Reached end; updating min_avg_plan_step_count to {self.min_avg_plan_step_count}")
                 self.full_reset()
@@ -32,12 +31,11 @@ class IncrementalRandomTracker:
                 self.record_prefix(plan_steps)
                 if self.ready_to_choose_prefix():
                     self.choose_best_prefix()
-                attempts += 1
+                self.attempts += 1
                 current_total_cost = self.prefix_cost + plan_steps[-1].total_cost
                 if max_cost is None or current_total_cost < max_cost:
                     plan_times.append(([self.plan_prefix] + plan_steps[-1].plan, current_total_cost, elapsed_time))
                     max_cost = current_total_cost
-        self.log(f"attempts: {attempts}")
         return plan_times
 
     # noinspection PyAttributeOutsideInit
