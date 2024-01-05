@@ -9,7 +9,23 @@ class IncrementalRandomTracker:
         self.min_avg_plan_step_count = min_avg_plan_step_count
         self.show_incremental = show_incremental
         self.attempts = 0
+        self.num_resets = -1
         self.full_reset()
+
+    # noinspection PyAttributeOutsideInit
+    def full_reset(self):
+        self.num_resets += 1
+        self.plan_prefix = []
+        self.prefix_cost = 0
+        self.state = self.start_state
+        self.partial_reset()
+
+    # noinspection PyAttributeOutsideInit
+    def partial_reset(self):
+        self.first_action_outcomes = {}
+        self.first_action_states = {}
+        self.first_action_costs = {}
+        self.current_first_actions = 0
 
     def log(self, msg):
         if self.show_incremental:
@@ -38,19 +54,8 @@ class IncrementalRandomTracker:
                     max_cost = current_total_cost
         return plan_times
 
-    # noinspection PyAttributeOutsideInit
-    def full_reset(self):
-        self.plan_prefix = []
-        self.prefix_cost = 0
-        self.state = self.start_state
-        self.partial_reset()
-
-    # noinspection PyAttributeOutsideInit
-    def partial_reset(self):
-        self.first_action_outcomes = {}
-        self.first_action_states = {}
-        self.first_action_costs = {}
-        self.current_first_actions = 0
+    def progress_report(self):
+        return f"Full resets: {self.num_resets} Prefix steps: {len(self.plan_prefix)}"
 
     def record_prefix(self, plan_steps):
         prefix = plan_steps[-1].plan[0]

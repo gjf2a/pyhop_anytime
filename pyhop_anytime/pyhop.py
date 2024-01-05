@@ -195,7 +195,7 @@ class Planner:
         tracker = IncrementalRandomTracker(self, tasks, state, min_avg_plan_step_count,
                                            show_incremental=show_incremental)
         plan_times = tracker.plan(max_seconds, verbose)
-        print(f"attempts: {tracker.attempts}")
+        print(f"attempts: {tracker.attempts} {tracker.progress_report()}")
         return plan_times
 
     def n_random(self, state, tasks, n, verbose=0):
