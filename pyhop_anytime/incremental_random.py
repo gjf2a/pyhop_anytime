@@ -2,11 +2,11 @@ import time
 
 
 class IncrementalRandomTracker:
-    def __init__(self, planner, tasks, start_state):
+    def __init__(self, planner, tasks, start_state, min_avg_plan_step_count):
         self.planner = planner
         self.tasks = tasks
         self.start_state = start_state
-        self.min_avg_plan_step_count = 2
+        self.min_avg_plan_step_count = min_avg_plan_step_count
         self.full_reset()
 
     def plan(self, max_seconds, verbose=0):
@@ -72,6 +72,7 @@ class IncrementalRandomTracker:
                 lowest_cost_step = first_step
                 lowest_cost = outcome.mean()
         self.plan_prefix.append(lowest_cost_step)
+        print(f"chose {lowest_cost_step}")
         self.prefix_cost += self.first_action_costs[lowest_cost_step]
         self.state = self.first_action_states[lowest_cost_step]
         self.partial_reset()

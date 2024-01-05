@@ -104,7 +104,8 @@ class Planner:
             if plan:
                 return plan
 
-    def anyhop(self, state, tasks, max_seconds=None, verbose=0, disable_branch_bound=False, queue_init=lambda: SearchStack()):
+    def anyhop(self, state, tasks, max_seconds=None, verbose=0, disable_branch_bound=False,
+               queue_init=lambda: SearchStack()):
         start_time = time.time()
         plan_times = []
         for plan in self.pyhop_generator(state, tasks, verbose, disable_branch_bound, yield_cost=True,
@@ -189,8 +190,8 @@ class Planner:
         print(f"attempts: {attempts}")
         return plan_times
 
-    def anyhop_random_incremental(self, state, tasks, max_seconds, verbose=0):
-        tracker = IncrementalRandomTracker(self, tasks, state)
+    def anyhop_random_incremental(self, state, tasks, max_seconds, min_avg_plan_step_count=2, verbose=0):
+        tracker = IncrementalRandomTracker(self, tasks, state, min_avg_plan_step_count)
         return tracker.plan(max_seconds, verbose)
 
     def n_random(self, state, tasks, n, verbose=0):
