@@ -28,7 +28,7 @@ def spanning_tree(tsp_state):
              for i in range(1, num_cities)]
     heapq.heapify(edges)
     visited = {0}
-    mst = {i:[] for i in range(num_cities)}
+    mst = {i: [] for i in range(num_cities)}
     mst_cost = 0
 
     while edges:
@@ -45,6 +45,24 @@ def spanning_tree(tsp_state):
                                            successor))
     return mst, mst_cost
 
+
+def dfs_mst(mst):
+    visited = []
+    dfs_mst_help(mst, 0, visited)
+    return visited
+
+
+def dfs_mst_help(mst, node, visited):
+    if node not in visited:
+        visited.append(node)
+        for child in mst[node]:
+            dfs_mst_help(mst, child, visited)
+
+
+def mst_tour_cost(mst, locations):
+    visited = dfs_mst(mst)
+    return sum([euclidean_distance(locations[visited[i]], locations[visited[(i + 1) % len(visited)]])
+                for i in range(len(visited))])
 
 def move(state, new_city):
     if new_city not in state.visited:
@@ -109,7 +127,9 @@ if __name__ == '__main__':
     s, t = make_metric_tsp_state(25, 200, 200)
     mst, mst_size = spanning_tree(s)
     print(mst)
+    visited_cost = mst_tour_cost(mst, s.locations)
     print(f"Minimum spanning tree: {mst_size:7.2f}")
+    print(f"MST tour cost: {visited_cost:7.2f}\tMST Ratio: {visited_cost / mst_size:7.2f}")
     max_seconds = 5
     summarize("DFS", mst_size, p.anyhop(s, t, max_seconds=max_seconds))
     summarize("Random", mst_size, p.anyhop_random(s, t, max_seconds=max_seconds))
