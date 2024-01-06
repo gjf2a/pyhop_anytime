@@ -167,7 +167,7 @@ def make_blocks_planner():
 
 
 def parse_pddl_blocks(filename):
-    contents = open(filename).read().lower()
+    contents = open(filename).read().lower().replace("\n", "")
     problem_at = contents.find("problem")
     problem = contents[problem_at + len("problem "):contents.find(")", problem_at)]
     init = State(f"{problem}_init")
@@ -192,24 +192,29 @@ def parse_pddl_blocks(filename):
             up, down = section.split()[1:]
             init.pos[up] = down
         else:
-            print(f"Unrecognized predicate: {section}")
+            print(f"Unrecognized init predicate: `{section}`")
         open_paren = init_text.find("(", close_paren)
 
     goal = State(f"{problem}_goal")
     goal.holding = False
     goal.clear = {name: True for name in object_names}
     goal.pos = {name: 'table' for name in object_names}
-    goal_at = contents.find(":goal (and ") + len(":goal (and ")
+    goal_at = contents.find(":goal (and") + len(":goal (and")
     goal_text = contents[goal_at:contents.find("))", goal_at) + 1]
+    print(f"`{goal_text}`")
     open_paren = goal_text.find("(")
     while open_paren >= 0:
         close_paren = goal_text.find(")", open_paren)
         section = goal_text[open_paren + 1:close_paren]
-        if section.startswith("on"):
+        if section.startswith("ontable"):
+            init.pos[section.split()[1]] = 'table'
+        elif section.startswith("on"):
             up, down = section.split()[1:]
             goal.pos[up] = down
             goal.clear[down] = False
+        elif section.startswith("handempty"):
+            goal.holding = False
         else:
-            print(f"Unrecognized predicate: {section}")
+            print(f"Unrecognized goal predicate: `{section}`")
         open_paren = goal_text.find("(", close_paren)
     return init, goal
