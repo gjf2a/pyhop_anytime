@@ -1,4 +1,7 @@
 import time
+import random
+
+from pyhop_anytime import PlanStep
 
 
 class IncrementalRandomTracker:
@@ -116,3 +119,41 @@ class OutcomeCounter:
         return self.total / self.count
 
 
+class ActionTracker:
+    def __init__(self, planner, tasks, state):
+        self.planner = planner
+        self.tasks = tasks
+        self.state = state
+        self.action_outcomes = {}
+
+    def plan(self, max_seconds, verbose=0):
+        start_time = time.time()
+        elapsed_time = 0
+        max_cost = None
+        plan_times = []
+        attempts = 0
+        while elapsed_time < max_seconds:
+            plan_step = self.make_one_plan(verbose)
+            elapsed_time = time.time() - start_time
+            attempts += 1
+            if plan_step is not None and (max_cost is None or plan_step.total_cost < max_cost):
+                plan_times.append((plan_step.plan, plan_step.total_cost, elapsed_time))
+                max_cost = plan_step.total_cost
+        print(f"attempts: {attempts}")
+        return plan_times
+
+    def make_one_plan(self, verbose):
+        # Rewrite this to employ action outcomes
+        self.planner.verbose = verbose
+        candidate = PlanStep([], self.tasks, self.state, self.planner.copy_func, self.planner.cost_func)
+        while not (candidate is None or candidate.complete()):
+            successors = candidate.successors(self.planner)
+            if len(successors) == 0:
+                return None
+            # This is the place to do that.
+            candidate = successors[random.randint(0, len(successors) - 1)]
+        for action in candidate.plan:
+            if action not in self.action_outcomes:
+                self.action_outcomes[action] = OutcomeCounter()
+            self.action_outcomes[action].record(candidate.total_cost)
+        return candidate
