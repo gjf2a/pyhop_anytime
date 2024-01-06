@@ -2,7 +2,8 @@
 # selecting particular actions.
 #
 # This is a fairly interesting solution.
-# I need to do some more work to evaluate it. Preliminary results are mixed.
+# With a high weight (e.g. 40) on the MST tour edges, it gets great results on 25 cities, and pretty good results
+# on 50 cities.
 
 from pyhop_anytime import State, TaskList, Planner
 from tsp import euclidean_distance, random_coordinate, spanning_tree, move, summarize, mst_tour_cost, dfs_mst
