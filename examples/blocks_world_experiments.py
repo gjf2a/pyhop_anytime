@@ -22,4 +22,4 @@ def experiment(filename, max_seconds):
 if __name__ == "__main__":
     experiment("/Users/ferrer/Downloads/AIPS-2000DataFiles/2000-Tests/Blocks/Track1/Untyped/probBLOCKS-17-0.pddl", 1)
     experiment("/Users/ferrer/Downloads/AIPS-2000DataFiles/2000-Tests/Blocks/Track2/probBLOCKS-60-1.pddl", 10)
-    experiment("/Users/ferrer/Downloads/AIPS-2000DataFiles/2000-Tests/Blocks/Track2/Additional/probblocks-500-1.pddl", 10)
+    #experiment("/Users/ferrer/Downloads/AIPS-2000DataFiles/2000-Tests/Blocks/Track2/Additional/probblocks-100-1.pddl", 10)
