@@ -49,18 +49,22 @@ def tsp_planner():
     return planner
 
 
-if __name__ == '__main__':
+def tsp_experiment(num_cities, max_seconds):
+    print(f"{num_cities} cities, {max_seconds}s time limit")
     p = tsp_planner()
-    s, t = make_metric_tsp_state(25, 200, 200)
+    s, t = make_metric_tsp_state(num_cities, 200, 200)
     print(s.locations)
     mst, mst_size = spanning_tree(s)
     print(mst)
     visited_cost = mst_tour_cost(mst, s.locations)
     print(f"Minimum spanning tree: {mst_size:7.2f}")
     print(f"MST tour cost: {visited_cost:7.2f}\tMST Ratio: {visited_cost / mst_size:7.2f}")
-    max_seconds = 5
     summarize("Random max", mst_size, p.anyhop_random(s, t, use_max_cost=True, max_seconds=max_seconds))
     summarize("Random no-max", mst_size, p.anyhop_random(s, t, use_max_cost=False, max_seconds=max_seconds))
     summarize("Random incremental", mst_size, p.anyhop_random_incremental(s, t, max_seconds=max_seconds))
 
+
+if __name__ == '__main__':
+    tsp_experiment(25, 5)
+    tsp_experiment(50, 15)
 
