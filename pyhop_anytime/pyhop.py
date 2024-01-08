@@ -162,7 +162,8 @@ class Planner:
     #
     # The weighted-random stored too much data and didn't even do that well.
     #
-    # What if, instead, we generate a bunch of plans (say, 10-50, or maybe calculated somehow based on lengths).
+    # What if, instead, we generate a bunch of plans. We keep generating until several first-plan-steps have appeared
+    # at least a few times.
     # We then look at every first-plan-step, and for each one we find the average plan cost.
     # Note that for best results we need to disable max-cost pruning.
     #
