@@ -29,7 +29,7 @@ Copyright 2013 Dana S. Nau - http://www.cs.umd.edu/~nau
 import copy
 import time
 
-from pyhop_anytime.incremental_random import IncrementalRandomTracker
+from pyhop_anytime.incremental_random import IncrementalRandomTracker, OutcomeCounter
 from pyhop_anytime.search_queues import *
 import random
 
@@ -206,6 +206,22 @@ class Planner:
             if plan is not None:
                 plans.append(plan)
         return plans
+
+    def make_action_tracked_plan(self, action_tracker, verbose):
+        # Rewrite this to employ action outcomes
+        self.verbose = verbose
+        candidate = PlanStep([], action_tracker.tasks, action_tracker.state, self.copy_func, self.cost_func)
+        while not (candidate is None or candidate.complete()):
+            successors = candidate.successors(self)
+            if len(successors) == 0:
+                return None
+            # This is the place to do that.
+            candidate = successors[random.randint(0, len(successors) - 1)]
+        for action in candidate.plan:
+            if action not in action_tracker.action_outcomes:
+                action_tracker.action_outcomes[action] = OutcomeCounter()
+            action_tracker.action_outcomes[action].record(candidate.total_cost)
+        return candidate
 
 
 class PlanStep:
