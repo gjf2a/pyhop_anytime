@@ -17,7 +17,7 @@ def make_metric_tsp_state(num_cities, width, height):
     state.locations = [(random_coordinate(width), random_coordinate(height)) for i in range(num_cities)]
     state.at = 0
     state.visited = set()
-    return state, [('nondeterministic_choice',)]
+    return state, [('complete_tour_from', 0)]
 
 
 # Adapted from: https://reintech.io/blog/pythonic-way-of-implementing-kruskals-algorithm
@@ -65,29 +65,29 @@ def mst_tour_cost(mst, locations):
                 for i in range(len(visited))])
 
 
-def move(state, new_city):
-    if new_city not in state.visited:
+def move(state, current_city, new_city):
+    if state.at == current_city and new_city not in state.visited:
         state.visited.add(new_city)
         state.at = new_city
         return state
 
 
-def nondeterministic_choice(state):
+def complete_tour_from(state, current_city):
     if len(state.visited) == len(state.locations):
         return TaskList(completed=True)
-    tasks = [[('move', city), ('nondeterministic_choice',)]
+    tasks = [[('move', current_city, city), ('complete_tour_from', city)]
              for city in range(1, len(state.locations)) if city not in state.visited]
     if len(tasks) == 0:
-        return TaskList([('move', 0)])
+        return TaskList([('move', current_city, 0)])
     else:
         return TaskList(tasks)
 
 
 def tsp_planner():
     planner = Planner(cost_func=lambda state, step: euclidean_distance(state.locations[state.at],
-                                                                       state.locations[step[1]]))
+                                                                       state.locations[step[2]]))
     planner.declare_operators(move)
-    planner.declare_methods(nondeterministic_choice)
+    planner.declare_methods(complete_tour_from)
     return planner
 
 

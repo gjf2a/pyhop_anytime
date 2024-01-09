@@ -166,6 +166,9 @@ print(big_plan_stats)
 rand_plan = planner.randhop(state3, [('move_blocks', goal3)])
 print(f"Random plan length: {len(rand_plan.plan)}")
 
+rand_plan_times = planner.anyhop_random_incremental(state3, [('move_blocks', goal3)], 2)
+print(f"Random incremental plan length: {len(rand_plan_times[-1][0])}")
+
 
 class Test(unittest.TestCase):
 
