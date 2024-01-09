@@ -91,10 +91,10 @@ def tsp_planner():
     return planner
 
 
-def summarize(header, mst_size, plans):
+def summarize(header, mst_size, mst_tour_size, plans):
     print(f"{header}: {len(plans)} plans")
-    print(f"First cost {plans[0][1]:7.2f}\tMST Ratio: {plans[0][1] / mst_size:7.2f}\ttime {plans[0][2]:4.2f}")
-    print(f"Last cost  {plans[-1][1]:7.2f}\tMST Ratio: {plans[-1][1] / mst_size:7.2f}\ttime {plans[-1][2]:4.2f}")
+    print(f"First cost {plans[0][1]:7.2f}\tMST Ratio: {plans[0][1] / mst_size:7.2f}\tMST Tour Ratio: {plans[0][1] / mst_tour_size:7.2f}\ttime {plans[0][2]:4.2f}")
+    print(f"Last cost  {plans[-1][1]:7.2f}\tMST Ratio: {plans[-1][1] / mst_size:7.2f}\tMST Tour Ratio: {plans[-1][1] / mst_tour_size:7.2f}\ttime {plans[-1][2]:4.2f}")
 
 
 # Experiment notes:
@@ -133,11 +133,11 @@ def tsp_experiment(num_cities, max_seconds):
     visited_cost = mst_tour_cost(mst, s.locations)
     print(f"Minimum spanning tree: {mst_size:7.2f}")
     print(f"MST tour cost: {visited_cost:7.2f}\tMST Ratio: {visited_cost / mst_size:7.2f}")
-    summarize("DFS", mst_size, p.anyhop(s, t, max_seconds=max_seconds))
-    summarize("Random", mst_size, p.anyhop_random(s, t, max_seconds=max_seconds))
-    summarize("Random no-max", mst_size, p.anyhop_random(s, t, use_max_cost=False, max_seconds=max_seconds))
-    summarize("Random incremental", mst_size, p.anyhop_random_incremental(s, t, max_seconds=max_seconds))
-    summarize("Random action tracked", mst_size, p.anyhop_random_tracked(s, t, max_seconds=max_seconds))
+    summarize("DFS", mst_size, visited_cost, p.anyhop(s, t, max_seconds=max_seconds))
+    summarize("Random", mst_size, visited_cost, p.anyhop_random(s, t, max_seconds=max_seconds))
+    summarize("Random no-max", mst_size, visited_cost, p.anyhop_random(s, t, use_max_cost=False, max_seconds=max_seconds))
+    summarize("Random incremental", mst_size, visited_cost, p.anyhop_random_incremental(s, t, max_seconds=max_seconds))
+    summarize("Random action tracked", mst_size, visited_cost, p.anyhop_random_tracked(s, t, max_seconds=max_seconds))
     #summarize("MC", p.anyhop(s, t, max_seconds=3, queue_init=lambda: MonteCarloPlannerHeap(p, go_deep_first=False)))
     #summarize("MC go deep", p.anyhop(s, t, max_seconds=3, queue_init=lambda: MonteCarloPlannerHeap(p, go_deep_first=True)))
 
