@@ -1,4 +1,5 @@
 import time
+import random
 
 
 class IncrementalRandomTracker:
@@ -116,25 +117,62 @@ class OutcomeCounter:
         return self.total / self.count
 
 
+def tracker_successor_key(successor):
+    return successor.tasks[0]
+
+
 class ActionTracker:
     def __init__(self, planner, tasks, state):
         self.planner = planner
         self.tasks = tasks
         self.state = state
         self.action_outcomes = {}
+        self.attempts = 0
 
     def plan(self, max_seconds, verbose=0):
         start_time = time.time()
         elapsed_time = 0
         max_cost = None
         plan_times = []
-        attempts = 0
         while elapsed_time < max_seconds:
             plan_step = self.planner.make_action_tracked_plan(self, verbose)
             elapsed_time = time.time() - start_time
-            attempts += 1
+            self.attempts += 1
             if plan_step is not None and (max_cost is None or plan_step.total_cost < max_cost):
                 plan_times.append((plan_step.plan, plan_step.total_cost, elapsed_time))
                 max_cost = plan_step.total_cost
-        print(f"attempts: {attempts}")
         return plan_times
+
+    def random_index_from(self, successors):
+        if len(successors) == 1:
+            return successors[0]
+        d = self.distribution_for(successors)
+        r = random.random()
+        for (i, share) in d.items():
+            if share > r:
+                return i
+            else:
+                r -= share
+        assert False
+
+    def distribution_for(self, successors):
+        outcomes = [self.action_outcomes.get(tracker_successor_key(s)) for s in successors]
+        rankable = {i for i in range(len(outcomes)) if outcomes[i] is not None}
+        if len(rankable) > 1:
+            rankings = [(outcomes[i].mean(), i) for i in rankable]
+            rankings.sort(key=lambda k: k[0])
+            rankable_budget = len(rankable) / len(outcomes)
+            distribution = {}
+            if len(rankable) < len(outcomes):
+                unrankable_share = (1.0 - rankable_budget) / (len(outcomes) - len(rankable))
+                for i in range(len(outcomes)):
+                    if i not in rankable:
+                        distribution[i] = unrankable_share
+            rankable_share = 2 * rankable_budget / (len(rankings) * (len(rankings) + 1))
+            for (r_i, (m, i)) in enumerate(rankings):
+                distribution[i] = rankable_share * (len(rankings) - r_i)
+            assert len(distribution) == len(successors)
+            return distribution
+        else:
+            share = 1.0 / len(successors)
+            return {i: share for i in range(len(successors))}

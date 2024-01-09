@@ -29,7 +29,8 @@ Copyright 2013 Dana S. Nau - http://www.cs.umd.edu/~nau
 import copy
 import time
 
-from pyhop_anytime.incremental_random import IncrementalRandomTracker, OutcomeCounter
+from pyhop_anytime.incremental_random import IncrementalRandomTracker, OutcomeCounter, ActionTracker, \
+    tracker_successor_key
 from pyhop_anytime.search_queues import *
 import random
 
@@ -198,6 +199,12 @@ class Planner:
         print(f"attempts: {tracker.attempts} {tracker.progress_report()}")
         return plan_times
 
+    def anyhop_random_tracked(self, state, tasks, max_seconds, verbose=0):
+        tracker = ActionTracker(self, tasks, state)
+        plan_times = tracker.plan(max_seconds, verbose)
+        print(f"attempts: {tracker.attempts}")
+        return plan_times
+
     def n_random(self, state, tasks, n, verbose=0):
         self.verbose = verbose
         plans = []
@@ -208,19 +215,23 @@ class Planner:
         return plans
 
     def make_action_tracked_plan(self, action_tracker, verbose):
-        # Rewrite this to employ action outcomes
         self.verbose = verbose
         candidate = PlanStep([], action_tracker.tasks, action_tracker.state, self.copy_func, self.cost_func)
+        chosen_methods = []
         while not (candidate is None or candidate.complete()):
             successors = candidate.successors(self)
             if len(successors) == 0:
                 return None
-            # This is the place to do that.
-            candidate = successors[random.randint(0, len(successors) - 1)]
-        for action in candidate.plan:
-            if action not in action_tracker.action_outcomes:
-                action_tracker.action_outcomes[action] = OutcomeCounter()
-            action_tracker.action_outcomes[action].record(candidate.total_cost)
+            if len(successors) > 1:
+                chosen_index = action_tracker.random_index_from(successors)
+                chosen_methods.append(tracker_successor_key(successors[chosen_index]))
+                candidate = successors[chosen_index]
+            else:
+                candidate = successors[0]
+        for choice in chosen_methods:
+            if choice not in action_tracker.action_outcomes:
+                action_tracker.action_outcomes[choice] = OutcomeCounter()
+            action_tracker.action_outcomes[choice].record(candidate.total_cost)
         return candidate
 
 

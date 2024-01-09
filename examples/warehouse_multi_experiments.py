@@ -32,3 +32,7 @@ if __name__ == '__main__':
         plan_times = planner.anyhop_random_incremental(state, tasks, max_seconds=max_seconds)
         print([(plan[1], plan[2]) for plan in plan_times])
         print()
+        print("tracked random")
+        plan_times = planner.anyhop_random_tracked(state, tasks, max_seconds=max_seconds)
+        print([(plan[1], plan[2]) for plan in plan_times])
+        print()
