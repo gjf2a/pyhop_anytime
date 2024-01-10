@@ -2,7 +2,7 @@ import random
 import heapq
 from enum import Enum
 
-from pyhop_anytime import State, TaskList
+from pyhop_anytime import State, TaskList, Planner
 
 
 class Facing(Enum):
@@ -66,10 +66,11 @@ def find_route(state, at, facing, goal):
         tasks = []
         future = next(state, at, facing)
         if future and (future, facing) not in state.visited:
-            tasks.append(('move_one_step', state.at, state.facing))
+            tasks.append([('move_one_step', at, facing), ('find_route', future, facing, goal)])
         for f in Facing:
             if f != facing and (at, f) not in state.visited:
-                tasks.append(('turn_to', f))
+                tasks.append([('turn_to', f), ('find_route', at, f, goal)])
+        print(f"{state}\n{tasks}\n")
         return TaskList(tasks)
 
 
@@ -111,9 +112,9 @@ def show_grid(state):
         print()
 
 
-def dijkstra(state, start, end):
+def a_star(state, start, end):
     visited = {}
-    frontier = [(0, start, None)]
+    frontier = [(0, manhattan_distance(start, end), start, None)]
     current = None
     while len(frontier) > 0:
         if current == end:
@@ -123,16 +124,30 @@ def dijkstra(state, start, end):
                 current = visited[current]
             return path
         else:
-            cost, current, parent = heapq.heappop(frontier)
+            cost, estimate, current, parent = heapq.heappop(frontier)
             if current not in visited:
                 visited[current] = parent
                 for f in Facing:
                     n = f + current
                     if in_bounds(state, n) and (current, f) not in state.obstacles:
-                        heapq.heappush(frontier, (cost + 1, n, current))
+                        heapq.heappush(frontier, (cost + 1, manhattan_distance(n, end), n, current))
+
+
+def make_grid_planner():
+    p = Planner()
+    p.declare_operators(move_one_step, turn_to)
+    p.declare_methods(find_route)
+    return p
 
 
 if __name__ == '__main__':
     state, tasks = generate_grid_world(7, 7, (1, 0), Facing.NORTH, (2, 6), 30)
     show_grid(state)
-    print(dijkstra(state, (1, 0), (2, 6)))
+    optimal = a_star(state, (1, 0), (2, 6))
+    print(optimal)
+    if optimal:
+        planner = make_grid_planner()
+        plan_times = planner.anyhop(state, tasks, max_seconds=2)
+        print(f"{len(plan_times)} plans")
+        for pt in plan_times:
+            print(pt)
