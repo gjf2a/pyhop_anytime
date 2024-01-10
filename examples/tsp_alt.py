@@ -22,31 +22,31 @@ def make_metric_tsp_state(num_cities, width, height):
         state.good_edges.add((t_i, next_one))
         state.good_edges.add((next_one, t_i))
 
-    return state, [('nondeterministic_choice',)]
+    return state, [('complete_tour_from', 0)]
 
 
-def nondeterministic_choice(state):
+def complete_tour_from(state, current):
     if len(state.visited) == len(state.locations):
         return TaskList(completed=True)
     tasks = []
     for city in range(1, len(state.locations)):
         if city not in state.visited:
-            task = [('move', city), ('nondeterministic_choice',)]
+            task = [('move', current, city), ('complete_tour_from', city)]
             tasks.append(task)
             if (state.at, city) in state.good_edges:
                 for i in range(40):
                     tasks.append(task)
     if len(tasks) == 0:
-        return TaskList([('move', 0)])
+        return TaskList([('move', current, 0)])
     else:
         return TaskList(tasks)
 
 
 def tsp_planner():
     planner = Planner(cost_func=lambda state, step: euclidean_distance(state.locations[state.at],
-                                                                       state.locations[step[1]]))
+                                                                       state.locations[step[2]]))
     planner.declare_operators(move)
-    planner.declare_methods(nondeterministic_choice)
+    planner.declare_methods(complete_tour_from)
     return planner
 
 
@@ -60,10 +60,10 @@ def tsp_experiment(num_cities, max_seconds):
     visited_cost = mst_tour_cost(mst, s.locations)
     print(f"Minimum spanning tree: {mst_size:7.2f}")
     print(f"MST tour cost: {visited_cost:7.2f}\tMST Ratio: {visited_cost / mst_size:7.2f}")
-    summarize("Random max", mst_size, p.anyhop_random(s, t, use_max_cost=True, max_seconds=max_seconds))
-    summarize("Random no-max", mst_size, p.anyhop_random(s, t, use_max_cost=False, max_seconds=max_seconds))
-    summarize("Random incremental", mst_size, p.anyhop_random_incremental(s, t, max_seconds=max_seconds))
-    summarize("Random action tracked", mst_size, p.anyhop_random_tracked(s, t, max_seconds=max_seconds))
+    #summarize("Random max", mst_size, visited_cost, p.anyhop_random(s, t, use_max_cost=True, max_seconds=max_seconds))
+    summarize("Random no-max", mst_size, visited_cost, p.anyhop_random(s, t, use_max_cost=False, max_seconds=max_seconds))
+    #summarize("Random incremental", mst_size, visited_cost, p.anyhop_random_incremental(s, t, max_seconds=max_seconds))
+    summarize("Random action tracked", mst_size, visited_cost, p.anyhop_random_tracked(s, t, max_seconds=max_seconds))
 
 
 if __name__ == '__main__':
