@@ -56,6 +56,7 @@ def move_one_step(state, at, facing):
     future = next(state, at, facing)
     if future:
         state.at = future
+        state.just_turned = False
         state.visited.add((future, facing))
         return state
 
@@ -63,6 +64,7 @@ def move_one_step(state, at, facing):
 def turn_to(state, facing):
     state.facing = facing
     state.visited.add((state.at, facing))
+    state.just_turned = True
     return state
 
 
@@ -72,17 +74,22 @@ def find_route(state, at, facing, goal):
             return TaskList(completed=True)
         tasks = []
         future = next(state, at, facing)
-        print(f"future: {future}")
         if future and (future, facing) not in state.visited:
             tasks.append([('move_one_step', at, facing), ('find_route', future, facing, goal)])
-        for f in Facing:
-            print(f"f: {f}")
-            if f != facing and (at, f) not in state.visited:
-                future = projection(state, at, f)
-                print(f"future in {f}: {future}")
-                if future and (future, f) not in state.visited:
-                    tasks.append([('turn_to', f), ('find_route', at, f, goal)])
-        print(f"{state}\n{tasks}\n")
+        if not state.just_turned:
+            for f in Facing:
+                if f != facing:
+                    future = projection(state, at, f)
+                    if future and (future, f) not in state.visited:
+                        tasks.append([('turn_to', f), ('find_route', at, f, goal)])
+        if len(tasks) == 0:
+            projections = []
+            for f in Facing:
+                if f != facing:
+                    p = projection(state, at, f)
+                    if p:
+                        projections.append((p, (p, f) in state.visited))
+            #print(f"at: {at} facing: {facing} future: {future} ({(future, facing) in state.visited}) turned: {state.just_turned} projections: {projections}")
         return TaskList(tasks)
 
 
@@ -93,6 +100,7 @@ def generate_grid_world(width, height, start, start_facing, end, num_obstacles):
     state.visited = {(start, start_facing)}
     state.width = width
     state.height = height
+    state.just_turned = False
     state.obstacles = set()
     obstacle_facings = [Facing.SOUTH, Facing.EAST]
     obstacle_candidates = [(x, y, f) for x in range(width - 1) for y in range(height - 1) for f in obstacle_facings]
@@ -106,21 +114,27 @@ def generate_grid_world(width, height, start, start_facing, end, num_obstacles):
 
 
 def show_grid(state):
+    print(" ", end='')
+    for x in range(state.width):
+        print(f" {x}", end='')
+    print()
     for y in range(state.height):
         if y > 0:
+            print("  ", end='')
             for x in range(state.width):
                 if ((x, y), Facing.NORTH) in state.obstacles:
                     print("_ ", end='')
                 else:
                     print(". ", end='')
             print()
+        print(f"{y} ", end='')
         for x in range(state.width):
             if x > 0:
                 if ((x, y), Facing.WEST) in state.obstacles:
                     print("|", end='')
                 else:
                     print(".", end='')
-            print("O", end='')
+            print("#", end='')
         print()
 
 
