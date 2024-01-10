@@ -72,17 +72,13 @@ def find_route(state, at, facing, goal):
             return TaskList(completed=True)
         tasks = []
         future = next(state, at, facing)
-        #print(f"future: {future}")
         if future and (future, facing) not in state.visited:
             tasks.append([('move_one_step', at, facing), ('find_route', future, facing, goal)])
         for f in Facing:
-            #print(f"f: {f}")
             if f != facing and (at, f) not in state.visited:
                 future = projection(state, at, f)
-                #print(f"future in {f}: {future}")
                 if future and (future, f) not in state.visited:
                     tasks.append([('turn_to', f), ('find_route', at, f, goal)])
-        #print(f"{state}\n{tasks}\n")
         return TaskList(tasks)
 
 
