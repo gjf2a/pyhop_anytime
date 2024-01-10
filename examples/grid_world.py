@@ -41,7 +41,12 @@ def in_bounds(state, p):
 
 
 def next(state, at, facing):
-    if state.at == at and state.facing == facing and (at, facing) not in state.obstacles:
+    if state.at == at and state.facing == facing:
+        return projection(state, at, facing)
+
+
+def projection(state, at, facing):
+    if (at, facing) not in state.obstacles:
         future = facing + at
         if in_bounds(state, future):
             return future
@@ -51,11 +56,13 @@ def move_one_step(state, at, facing):
     future = next(state, at, facing)
     if future:
         state.at = future
+        state.visited.add((future, facing))
         return state
 
 
 def turn_to(state, facing):
     state.facing = facing
+    state.visited.add((state.at, facing))
     return state
 
 
@@ -65,12 +72,17 @@ def find_route(state, at, facing, goal):
             return TaskList(completed=True)
         tasks = []
         future = next(state, at, facing)
+        #print(f"future: {future}")
         if future and (future, facing) not in state.visited:
             tasks.append([('move_one_step', at, facing), ('find_route', future, facing, goal)])
         for f in Facing:
+            #print(f"f: {f}")
             if f != facing and (at, f) not in state.visited:
-                tasks.append([('turn_to', f), ('find_route', at, f, goal)])
-        print(f"{state}\n{tasks}\n")
+                future = projection(state, at, f)
+                #print(f"future in {f}: {future}")
+                if future and (future, f) not in state.visited:
+                    tasks.append([('turn_to', f), ('find_route', at, f, goal)])
+        #print(f"{state}\n{tasks}\n")
         return TaskList(tasks)
 
 
@@ -142,8 +154,8 @@ def make_grid_planner():
 
 if __name__ == '__main__':
     state, tasks = generate_grid_world(7, 7, (1, 0), Facing.NORTH, (2, 6), 30)
-    show_grid(state)
     optimal = a_star(state, (1, 0), (2, 6))
+    show_grid(state)
     print(optimal)
     if optimal:
         planner = make_grid_planner()
