@@ -68,7 +68,7 @@ def tsp_experiment(num_cities, max_seconds):
 
 if __name__ == '__main__':
     tsp_experiment(25, 5)
-    tsp_experiment(50, 30)
+    tsp_experiment(50, 60)
 
 # A representative experiment:
 #

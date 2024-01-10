@@ -202,7 +202,7 @@ class Planner:
     def anyhop_random_tracked(self, state, tasks, max_seconds, verbose=0):
         tracker = ActionTracker(self, tasks, state)
         plan_times = tracker.plan(max_seconds, verbose)
-        print(f"attempts: {tracker.attempts}")
+        print(f"attempts: {tracker.attempts} (failures: {tracker.failures})")
         return plan_times
 
     def n_random(self, state, tasks, n, verbose=0):
@@ -221,17 +221,21 @@ class Planner:
         while not (candidate is None or candidate.complete()):
             successors = candidate.successors(self)
             if len(successors) == 0:
-                return None
-            if len(successors) > 1:
+                candidate = None
+            elif len(successors) == 1:
+                candidate = successors[0]
+            else:
                 chosen_index = action_tracker.random_index_from(successors)
                 chosen_methods.append(tracker_successor_key(successors[chosen_index]))
                 candidate = successors[chosen_index]
-            else:
-                candidate = successors[0]
+
         for choice in chosen_methods:
             if choice not in action_tracker.action_outcomes:
                 action_tracker.action_outcomes[choice] = OutcomeCounter()
-            action_tracker.action_outcomes[choice].record(candidate.total_cost)
+            if candidate is None:
+                action_tracker.action_outcomes[choice].failure()
+            else:
+                action_tracker.action_outcomes[choice].record(candidate.total_cost)
         return candidate
 
 

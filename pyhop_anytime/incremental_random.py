@@ -1,5 +1,6 @@
 import time
 import random
+from functools import total_ordering
 
 
 class IncrementalRandomTracker:
@@ -92,29 +93,48 @@ class IncrementalRandomTracker:
         self.partial_reset()
 
 
+@total_ordering
 class OutcomeCounter:
-    def __init__(self, total=0, count=0, min=None, max=None):
+    def __init__(self, total=0, count=0, minimum=None, maximum=None, num_failed=0):
         self.total = total
-        self.count = count
-        self.min = min
-        self.max = max
+        self.num_succeeded = count
+        self.min = minimum
+        self.max = maximum
+        self.num_failed = num_failed
 
-    def __str__(self):
-        return f"{self.mean()} [{self.min}, {self.max}]"
+    def __eq__(self, other):
+        return self.total == other.total and self.num_succeeded == other.num_succeeded and self.min == other.min and self.max == other.max and self.num_failed == other.num_failed
+
+    def __lt__(self, other):
+        if self.num_succeeded == 0 and other.num_succeeded == 0:
+            return self.num_failed < other.num_failed
+        elif self.num_succeeded == 0 and other.num_succeeded > 0:
+            return False
+        elif self.num_succeeded > 0 and other.num_succeeded == 0:
+            return True
+        else:
+            failure_penalty = 2 * max(self.max, other.max)
+            return self.test_mean(failure_penalty) < other.test_mean(failure_penalty)
 
     def __repr__(self):
-        return f"OutcomeCounter(total={self.total}, count={self.count}, min={self.min}, max={self.max})"
+        return f"OutcomeCounter(total={self.total}, count={self.num_succeeded}, minimum={self.min}, maximum={self.max}, num_failed={self.num_failed})"
+
+    def failure(self):
+        self.num_failed += 1
 
     def record(self, outcome):
         self.total += outcome
-        self.count += 1
+        self.num_succeeded += 1
         if self.min is None or self.min > outcome:
             self.min = outcome
         if self.max is None or self.max < outcome:
             self.max = outcome
 
+    def test_mean(self, failure_penalty):
+        return (self.total + self.num_failed * failure_penalty) / (self.num_succeeded + self.num_failed)
+
     def mean(self):
-        return self.total / self.count
+        return self.total / self.num_succeeded
 
 
 def tracker_successor_key(successor):
@@ -128,6 +148,7 @@ class ActionTracker:
         self.state = state
         self.action_outcomes = {}
         self.attempts = 0
+        self.failures = 0
 
     def plan(self, max_seconds, verbose=0):
         start_time = time.time()
@@ -138,7 +159,9 @@ class ActionTracker:
             plan_step = self.planner.make_action_tracked_plan(self, verbose)
             elapsed_time = time.time() - start_time
             self.attempts += 1
-            if plan_step is not None and (max_cost is None or plan_step.total_cost < max_cost):
+            if plan_step is None:
+                self.failures += 1
+            elif max_cost is None or plan_step.total_cost < max_cost:
                 plan_times.append((plan_step.plan, plan_step.total_cost, elapsed_time))
                 max_cost = plan_step.total_cost
         return plan_times
@@ -159,7 +182,7 @@ class ActionTracker:
         outcomes = [self.action_outcomes.get(tracker_successor_key(s)) for s in successors]
         rankable = {i for i in range(len(outcomes)) if outcomes[i] is not None}
         if len(rankable) > 1:
-            rankings = [(outcomes[i].mean(), i) for i in rankable]
+            rankings = [(outcomes[i], i) for i in rankable]
             rankings.sort(key=lambda k: k[0])
             rankable_budget = len(rankable) / len(outcomes)
             distribution = {}

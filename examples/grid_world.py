@@ -82,14 +82,14 @@ def find_route(state, at, facing, goal):
                     projected = projection(state, at, f)
                     if projected and (projected, f) not in state.visited:
                         tasks.append([('turn_to', f), ('find_route', at, f, goal)])
-        if len(tasks) == 0:
-            projections = []
-            for f in Facing:
-                if f != facing:
-                    p = projection(state, at, f)
-                    if p:
-                        projections.append((p, (p, f) in state.visited))
-            print(f"at: {at} facing: {facing} future: {future} ({(future, facing) in state.visited}) turned: {state.just_turned} projections: {projections}")
+        # if len(tasks) == 0:
+        #     projections = []
+        #     for f in Facing:
+        #         if f != facing:
+        #             p = projection(state, at, f)
+        #             if p:
+        #                 projections.append((p, (p, f) in state.visited))
+        #     print(f"at: {at} facing: {facing} future: {future} ({(future, facing) in state.visited}) turned: {state.just_turned} projections: {projections}")
         return TaskList(tasks)
 
 
@@ -134,7 +134,7 @@ def show_grid(state):
                     print("|", end='')
                 else:
                     print(".", end='')
-            print("#", end='')
+            print("O", end='')
         print()
 
 
@@ -167,13 +167,22 @@ def make_grid_planner():
 
 
 if __name__ == '__main__':
+    max_seconds = 4
     state, tasks = generate_grid_world(7, 7, (1, 0), Facing.NORTH, (2, 6), 30)
     optimal = a_star(state, (1, 0), (2, 6))
     show_grid(state)
     print(optimal)
     if optimal:
         planner = make_grid_planner()
-        plan_times = planner.anyhop(state, tasks, max_seconds=2)
+        print("Anyhop")
+        plan_times = planner.anyhop(state, tasks, max_seconds=max_seconds)
         print(f"{len(plan_times)} plans")
-        for pt in plan_times:
-            print(pt)
+        if len(plan_times) > 0:
+            print(plan_times[-1][1], plan_times[-1][2])
+        print()
+        print("Action Tracker")
+        plan_times = planner.anyhop_random_tracked(state, tasks, max_seconds=max_seconds)
+        print(f"{len(plan_times)} plans")
+        if len(plan_times) > 0:
+            print(plan_times[-1][1], plan_times[-1][2])
+        print()
