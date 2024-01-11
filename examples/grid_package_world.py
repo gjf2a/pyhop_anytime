@@ -16,18 +16,17 @@
 # * pyhop is the right tool for a job where the problem is NP-Complete. We can generate a valid solution in
 #   polynomial time but an optimal solution is hard to find. We bring to bear all polynomial-time resources to solve
 #   it, including auxiliary searches specialized to a task.
-from pyhop_anytime import State, TaskList, Planner, within, Facing, manhattan_distance, projection, \
-    generate_grid_obstacles, a_star, show_grid
+from pyhop_anytime import State, TaskList, Planner, Facing, Grid
 import random
 
 
 def in_bounds(state, p):
-    return within(p, state.width, state.height)
+    return state.grid.within(p)
 
 
 def project_towards(state, at, facing):
     if state.at == at and state.facing == facing:
-        return projection(state.obstacles, state.width, state.height, at, facing)
+        return state.grid.projection(at, facing)
 
 
 def move_one_step(state, at, facing):
@@ -57,33 +56,27 @@ def find_route(state, at, facing, goal):
         if not state.just_turned:
             for f in Facing:
                 if f != facing:
-                    projected = projection(state.obstacles, state.width, state.height, at, f)
+                    projected = state.grid.projection(at, f)
                     if projected and (projected, f) not in state.visited:
                         tasks.append([('turn_to', f), ('find_route', at, f, goal)])
-        # if len(tasks) == 0:
-        #     projections = []
-        #     for f in Facing:
-        #         if f != facing:
-        #             p = projection(state, at, f)
-        #             if p:
-        #                 projections.append((p, (p, f) in state.visited))
-        #     print(f"at: {at} facing: {facing} future: {future} ({(future, facing) in state.visited}) turned: {state.just_turned} projections: {projections}")
         return TaskList(tasks)
 
 
 def generate_grid_world(width, height, start, start_facing, capacity, num_packages, num_obstacles):
-    state = State(f"grid_{width}x{height}_at_{start}_{capacity}_capacity_{num_packages}_packages_{num_obstacles}_obstacles")
+    state = State(f"grid_{width}x{height}_{start}_to_{end}_{num_obstacles}_obstacles")
     state.at = start
-    state.holding = [None] * capacity
     state.facing = start_facing
+    state.visited = {(start, start_facing)}
     state.width = width
     state.height = height
-    state.obstacles = generate_grid_obstacles(width, height, num_obstacles)
+    state.just_turned = False
+    state.grid = Grid(width, height)
+    state.grid.add_random_obstacles(num_obstacles)
 
-    package_candidates = [(x, y) for x in range(width - 1) for y in range(height - 1)]
+    package_candidates = state.grid.all_locations()
     random.shuffle(package_candidates)
     state.package_locations = package_candidates[:num_packages]
-    package_goal_candidates = [(x, y) for x in range(width - 1) for y in range(height - 1)]
+    package_goal_candidates = state.grid.all_locations()
     state.package_goals = package_goal_candidates[:num_packages]
     return state, [('find_route', start, start_facing, end)]
 
@@ -98,8 +91,8 @@ def make_grid_planner():
 if __name__ == '__main__':
     max_seconds = 4
     state, tasks = generate_grid_world(7, 7, (1, 0), Facing.NORTH, (2, 6), 10, 30)
-    optimal = a_star(state.obstacles, state.width, state.height, (1, 0), (2, 6))
-    show_grid(state.obstacles, state.width, state.height)
+    optimal = state.grid.a_star((1, 0), (2, 6))
+    state.grid.print_grid()
     print(optimal)
     if optimal:
         planner = make_grid_planner()
