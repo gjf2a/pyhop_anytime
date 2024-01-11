@@ -1,6 +1,3 @@
-import random
-import heapq
-
 from pyhop_anytime import State, TaskList, Planner, within, Facing, manhattan_distance, projection, \
     generate_grid_obstacles, a_star, show_grid
 
