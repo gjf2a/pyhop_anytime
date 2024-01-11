@@ -56,10 +56,14 @@ def manhattan_neighbors(p):
 
 
 def in_bounds(state, p):
-    return 0 <= p[0] < state.width and 0 <= p[1] < state.height
+    return within(p, state.width, state.height)
 
 
-def next(state, at, facing):
+def within(p, width, height):
+    return 0 <= p[0] < width and 0 <= p[1] < height
+
+
+def project_towards(state, at, facing):
     if state.at == at and state.facing == facing:
         return projection(state, at, facing)
 
@@ -72,7 +76,7 @@ def projection(state, at, facing):
 
 
 def move_one_step(state, at, facing):
-    future = next(state, at, facing)
+    future = project_towards(state, at, facing)
     if future:
         state.at = future
         state.just_turned = False
@@ -92,7 +96,7 @@ def find_route(state, at, facing, goal):
         if at == goal:
             return TaskList(completed=True)
         tasks = []
-        future = next(state, at, facing)
+        future = project_towards(state, at, facing)
         if future and (future, facing) not in state.visited:
             tasks.append([('move_one_step', at, facing), ('find_route', future, facing, goal)])
         if not state.just_turned:
@@ -112,24 +116,48 @@ def find_route(state, at, facing, goal):
         return TaskList(tasks)
 
 
-def generate_grid_world(width, height, start, start_facing, end, num_obstacles):
-    state = State(f"grid_{width}x{height}_{start}_to_{end}_{num_obstacles}_obstacles")
+def generate_grid_world(width, height, start, start_facing, capacity, num_packages, num_obstacles):
+    state = State(f"grid_{width}x{height}_at_{start}_{capacity}_capacity_{num_packages}_packages_{num_obstacles}_obstacles")
     state.at = start
+    state.holding = [None] * capacity
     state.facing = start_facing
-    state.visited = {(start, start_facing)}
     state.width = width
     state.height = height
-    state.just_turned = False
     state.obstacles = set()
     obstacle_facings = [Facing.SOUTH, Facing.EAST]
     obstacle_candidates = [(x, y, f) for x in range(width - 1) for y in range(height - 1) for f in obstacle_facings]
     random.shuffle(obstacle_candidates)
-    for i in range(num_obstacles):
-        x1, y1, f = obstacle_candidates[i]
+    obstacle_candidate = 0
+    while len(state.obstacles) < num_obstacles and obstacle_candidate < len(obstacle_candidates):
+        x1, y1, f = obstacle_candidates[obstacle_candidate]
         state.obstacles.add(((x1, y1), f))
         x2, y2 = f + (x1, y1)
         state.obstacles.add(((x2, y2), -f))
+        obstacle_candidate += 1
+        if not all_cells_reachable(state.obstacles, state.width, state.height):
+            state.obstacles.remove(((x1, y1), f))
+            state.obstacles.remove(((x2, y2), -f))
+
+    package_candidates = [(x, y) for x in range(width - 1) for y in range(height - 1)]
+    random.shuffle(package_candidates)
+    state.package_locations = package_candidates[:num_packages]
+    package_goal_candidates = [(x, y) for x in range(width - 1) for y in range(height - 1)]
+    state.package_goals = package_goal_candidates[:num_packages]
     return state, [('find_route', start, start_facing, end)]
+
+
+def all_cells_reachable(obstacles, width, height):
+    reached = set()
+    heap = [(0, (0, 0))]
+    while len(heap) > 0:
+        cost, current = heapq.heappop(heap)
+        if current not in reached:
+            reached.add(current)
+            for f in Facing:
+                neighbor = f + current
+                if within(neighbor, width, height) and (neighbor, f) not in obstacles:
+                    heapq.heappush(heap, (1 + cost, neighbor))
+    return len(reached) == width * height
 
 
 def show_grid(state):
