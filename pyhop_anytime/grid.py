@@ -165,6 +165,12 @@ class Grid:
                         self.prev[i][j] = self.prev[k][j]
 
     def shortest_path_between(self, p1, p2):
+        # This diverges somewhat from Chapter 22 of: https://books.goalkicker.com/AlgorithmsBook/
+        #
+        # Because the obstacle generator ensures that all locations can be visited, I assume safely
+        # that a path exists between any two locations.
+        #
+        # Because the graph is undirected, I can start from the starting node without any trouble.
         if not self.shortest_paths_ready():
             self.floyd_warshall()
         path = [p1]
