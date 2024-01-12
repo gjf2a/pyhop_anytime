@@ -57,15 +57,17 @@ def go_to(state, start, end):
     if state.at == start:
         path = state.grid.shortest_path_between(start, end)
         actions = []
+        prev_facing = state.facing
         for i, current in enumerate(path):
             if i > 0:
                 prev = path[i - 1]
                 f = facing_from_to(prev, current)
                 if f is None:
                     return None
-                if f != state.facing:
+                if f != prev_facing:
                     actions.append(('turn_to', f))
                 actions.append(('move_one_step', prev, f))
+                prev_facing = f
         return TaskList(actions)
 
 ########
@@ -84,13 +86,11 @@ def move_one_step(state, at, facing):
     if future:
         state.at = future
         state.just_turned = False
-        state.visited.add((future, facing))
         return state
 
 
 def turn_to(state, facing):
     state.facing = facing
-    state.visited.add((state.at, facing))
     state.just_turned = True
     return state
 
@@ -99,7 +99,6 @@ def generate_grid_world(width, height, start, start_facing, capacity, num_packag
     state = State(f"grid_{width}x{height}_{start}_to_{num_obstacles}_obstacles_{num_packages}_packages_{capacity}_capacity")
     state.at = start
     state.facing = start_facing
-    state.visited = {(start, start_facing)}
     state.width = width
     state.height = height
     state.just_turned = False
@@ -124,8 +123,8 @@ def make_grid_planner():
 
 
 if __name__ == '__main__':
-    max_seconds = 1
-    state, tasks = generate_grid_world(5, 5, (1, 0), Facing.NORTH, 1, 1, 0)
+    max_seconds = 4
+    state, tasks = generate_grid_world(5, 5, (2, 2), Facing.NORTH, 1, 3, 30)
     state.grid.print_grid(lambda location: 'P' if location in state.package_locations else 'R' if location == state.at else 'G' if location in state.package_goals else 'O')
     planner = make_grid_planner()
     print("Anyhop")
