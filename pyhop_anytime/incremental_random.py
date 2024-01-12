@@ -191,7 +191,8 @@ class ActionTracker:
                 for i in range(len(outcomes)):
                     if i not in rankable:
                         distribution[i] = unrankable_share
-            weights = linear_decay_distribution(len(rankings), rankable_budget)
+            #weights = linear_decay_distribution(len(rankings), rankable_budget)
+            weights = exponential_decay_distribution(len(rankings), rankable_budget)
             for r_i, (m, i) in enumerate(rankings):
                 distribution[i] = weights[r_i]
             assert len(distribution) == len(successors)
