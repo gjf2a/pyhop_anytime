@@ -184,7 +184,7 @@ class ActionTracker:
         if len(rankable) > 1:
             rankings = [(outcomes[i], i) for i in rankable]
             rankings.sort(key=lambda k: k[0])
-            rankable_budget = len(rankable) / len(outcomes)
+            rankable_budget = 0.5#len(rankable) / len(outcomes)
             distribution = {}
             if len(rankable) < len(outcomes):
                 unrankable_share = (1.0 - rankable_budget) / (len(outcomes) - len(rankable))
