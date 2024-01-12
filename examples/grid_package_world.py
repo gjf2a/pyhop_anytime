@@ -24,7 +24,7 @@ def deliver_all(state):
     deliveries = []
     for package, start in enumerate(state.package_locations):
         if state.package_goals[package] != start:
-            deliveries.append([('retrieve_package', package), ('deliver_package', package), ('deliver_all',)])
+            deliveries.append([('retrieve_package', package), ('deliver_holding',), ('deliver_all',)])
     if len(deliveries) == 0:
         return TaskList(completed=True)
     else:
@@ -32,17 +32,29 @@ def deliver_all(state):
 
 
 def retrieve_package(state, package):
-    return TaskList([('go_to', state.at, state.package_locations[package]), ('pick_up', package)])
+    base_option = [('go_to', state.at, state.package_locations[package]), ('pick_up', package)]
+    options = [base_option]
+    if len(state.holding) + 1 < state.capacity:
+        for alt_package, alt_start in enumerate(state.package_locations):
+            if package != alt_package and state.package_goals[alt_package] != alt_start:
+                options.append(base_option + [('retrieve_package', alt_package)])
+    return TaskList(options)
 
 
-def deliver_package(state, package):
-    return TaskList([('go_to', state.at, state.package_goals[package]), ('put_down', package)])
+def deliver_holding(state):
+    if len(state.holding) == 1:
+        return TaskList([('go_to', state.at, state.package_goals[state.holding[0]]), ('put_down', state.holding[0])])
+    else:
+        options = []
+        for package in state.holding:
+            options.append([('go_to', state.at, state.package_goals[package]), ('put_down', package), ('deliver_holding',)])
+        return TaskList(options)
 
 
 def pick_up(state, package):
     if state.at == state.package_locations[package] and len(state.holding) < state.capacity:
         state.package_locations[package] = 'robot'
-        state.holding.add(package)
+        state.holding.append(package)
         return state
 
 
@@ -105,12 +117,15 @@ def generate_grid_world(width, height, start, start_facing, capacity, num_packag
     state.grid = Grid(width, height)
     state.grid.add_random_obstacles(num_obstacles)
     state.capacity = capacity
-    state.holding = set()
+    state.holding = []
 
     package_candidates = state.grid.all_locations()
     random.shuffle(package_candidates)
     state.package_locations = package_candidates[:num_packages]
     package_goal_candidates = state.grid.all_locations()
+    for start in state.package_locations:
+        package_goal_candidates.remove(start)
+    random.shuffle(package_goal_candidates)
     state.package_goals = package_goal_candidates[:num_packages]
     return state, [('deliver_all',)]
 
@@ -118,13 +133,13 @@ def generate_grid_world(width, height, start, start_facing, capacity, num_packag
 def make_grid_planner():
     p = Planner()
     p.declare_operators(move_one_step, turn_to, pick_up, put_down)
-    p.declare_methods(deliver_all, retrieve_package, deliver_package, go_to)
+    p.declare_methods(deliver_all, retrieve_package, deliver_holding, go_to)
     return p
 
 
 if __name__ == '__main__':
     max_seconds = 4
-    state, tasks = generate_grid_world(5, 5, (2, 2), Facing.NORTH, 1, 3, 30)
+    state, tasks = generate_grid_world(5, 5, (2, 2), Facing.NORTH, 2, 3, 30)
     state.grid.print_grid(lambda location: 'P' if location in state.package_locations else 'R' if location == state.at else 'G' if location in state.package_goals else 'O')
     planner = make_grid_planner()
     print("Anyhop")
