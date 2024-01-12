@@ -26,6 +26,12 @@ class Facing(Enum):
             return self.value[0] + other[0], self.value[1] + other[1]
 
 
+def facing_from_to(current, successor):
+    for f in Facing:
+        if f + current == successor:
+            return f
+
+
 def manhattan_distance(p1, p2):
     return sum(abs(p1[i] - p2[i]) for i in range(len(p1)))
 
@@ -64,9 +70,9 @@ class Grid:
 
     def are_neighbors(self, p1, p2):
         if self.within(p1) and self.within(p2):
-            for f in Facing:
-                if f + p1 == p2:
-                    return (p1, f) not in self.obstacles
+            f = facing_from_to(p1, p2)
+            if f is not None:
+                return (p1, f) not in self.obstacles
         return False
 
     def all_neighbors(self, p):
@@ -93,7 +99,7 @@ class Grid:
                     heapq.heappush(heap, (1 + cost, neighbor))
         return len(reached) == self.width * self.height
 
-    def print_grid(self):
+    def print_grid(self, location_char=lambda location: 'O'):
         print(" ", end='')
         for x in range(self.width):
             print(f" {x}", end='')
@@ -114,7 +120,7 @@ class Grid:
                         print("|", end='')
                     else:
                         print(".", end='')
-                print("O", end='')
+                print(location_char((x, y)), end='')
             print()
 
     def a_star(self, start, end):
@@ -179,10 +185,20 @@ class Grid:
         return path
 
 
+def show_grid_shortest_paths(grid):
+    if not grid.shortest_paths_ready():
+        grid.floyd_warshall()
+    for p in grid.dist:
+        print(p)
+        for t in grid.dist[p]:
+            print(f"\t{t}: {grid.dist[p][t]} {grid.prev[p][t]}")
+
+
 if __name__ == '__main__':
     grid = Grid(4, 3)
     grid.add_random_obstacles(8)
     grid.floyd_warshall()
     grid.print_grid()
+    show_grid_shortest_paths(grid)
     print(grid.shortest_path_between((0, 0), (grid.width - 1, grid.height - 1)))
 

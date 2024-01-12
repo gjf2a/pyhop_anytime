@@ -16,9 +16,59 @@
 # * pyhop is the right tool for a job where the problem is NP-Complete. We can generate a valid solution in
 #   polynomial time but an optimal solution is hard to find. We bring to bear all polynomial-time resources to solve
 #   it, including auxiliary searches specialized to a task.
-from pyhop_anytime import State, TaskList, Planner, Facing, Grid
+from pyhop_anytime import State, TaskList, Planner, Facing, Grid, facing_from_to
 import random
 
+
+def deliver_all(state):
+    deliveries = []
+    for package, start in enumerate(state.package_locations):
+        if state.package_goals[package] != start:
+            deliveries.append([('retrieve_package', package), ('deliver_package', package), ('deliver_all',)])
+    if len(deliveries) == 0:
+        return TaskList(completed=True)
+    else:
+        return TaskList(deliveries)
+
+
+def retrieve_package(state, package):
+    return TaskList([('go_to', state.at, state.package_locations[package]), ('pick_up', package)])
+
+
+def deliver_package(state, package):
+    return TaskList([('go_to', state.at, state.package_goals[package]), ('put_down', package)])
+
+
+def pick_up(state, package):
+    if state.at == state.package_locations[package] and len(state.holding) < state.capacity:
+        state.package_locations[package] = 'robot'
+        state.holding.add(package)
+        return state
+
+
+def put_down(state, package):
+    if package in state.holding:
+        state.package_locations[package] = state.at
+        state.holding.remove(package)
+        return state
+
+
+def go_to(state, start, end):
+    if state.at == start:
+        path = state.grid.shortest_path_between(start, end)
+        actions = []
+        for i, current in enumerate(path):
+            if i > 0:
+                prev = path[i - 1]
+                f = facing_from_to(prev, current)
+                if f is None:
+                    return None
+                if f != state.facing:
+                    actions.append(('turn_to', f))
+                actions.append(('move_one_step', prev, f))
+        return TaskList(actions)
+
+########
 
 def in_bounds(state, p):
     return state.grid.within(p)
@@ -45,25 +95,8 @@ def turn_to(state, facing):
     return state
 
 
-def find_route(state, at, facing, goal):
-    if at == state.at and facing == state.facing:
-        if at == goal:
-            return TaskList(completed=True)
-        tasks = []
-        future = project_towards(state, at, facing)
-        if future and (future, facing) not in state.visited:
-            tasks.append([('move_one_step', at, facing), ('find_route', future, facing, goal)])
-        if not state.just_turned:
-            for f in Facing:
-                if f != facing:
-                    projected = state.grid.projection(at, f)
-                    if projected and (projected, f) not in state.visited:
-                        tasks.append([('turn_to', f), ('find_route', at, f, goal)])
-        return TaskList(tasks)
-
-
 def generate_grid_world(width, height, start, start_facing, capacity, num_packages, num_obstacles):
-    state = State(f"grid_{width}x{height}_{start}_to_{end}_{num_obstacles}_obstacles")
+    state = State(f"grid_{width}x{height}_{start}_to_{num_obstacles}_obstacles_{num_packages}_packages_{capacity}_capacity")
     state.at = start
     state.facing = start_facing
     state.visited = {(start, start_facing)}
@@ -72,39 +105,40 @@ def generate_grid_world(width, height, start, start_facing, capacity, num_packag
     state.just_turned = False
     state.grid = Grid(width, height)
     state.grid.add_random_obstacles(num_obstacles)
+    state.capacity = capacity
+    state.holding = set()
 
     package_candidates = state.grid.all_locations()
     random.shuffle(package_candidates)
     state.package_locations = package_candidates[:num_packages]
     package_goal_candidates = state.grid.all_locations()
     state.package_goals = package_goal_candidates[:num_packages]
-    return state, [('find_route', start, start_facing, end)]
+    return state, [('deliver_all',)]
 
 
 def make_grid_planner():
     p = Planner()
-    p.declare_operators(move_one_step, turn_to)
-    p.declare_methods(find_route)
+    p.declare_operators(move_one_step, turn_to, pick_up, put_down)
+    p.declare_methods(deliver_all, retrieve_package, deliver_package, go_to)
     return p
 
 
 if __name__ == '__main__':
-    max_seconds = 4
-    state, tasks = generate_grid_world(7, 7, (1, 0), Facing.NORTH, (2, 6), 10, 30)
-    optimal = state.grid.a_star((1, 0), (2, 6))
-    state.grid.print_grid()
-    print(optimal)
-    if optimal:
-        planner = make_grid_planner()
-        print("Anyhop")
-        plan_times = planner.anyhop(state, tasks, max_seconds=max_seconds)
-        print(f"{len(plan_times)} plans")
-        if len(plan_times) > 0:
-            print(plan_times[-1][1], plan_times[-1][2])
-        print()
-        print("Action Tracker")
-        plan_times = planner.anyhop_random_tracked(state, tasks, max_seconds=max_seconds)
-        print(f"{len(plan_times)} plans")
-        if len(plan_times) > 0:
-            print(plan_times[-1][1], plan_times[-1][2])
-        print()
+    max_seconds = 1
+    state, tasks = generate_grid_world(5, 5, (1, 0), Facing.NORTH, 1, 1, 0)
+    state.grid.print_grid(lambda location: 'P' if location in state.package_locations else 'R' if location == state.at else 'G' if location in state.package_goals else 'O')
+    planner = make_grid_planner()
+    print("Anyhop")
+    plan_times = planner.anyhop(state, tasks, max_seconds=max_seconds)
+    print(f"{len(plan_times)} plans")
+    if len(plan_times) > 0:
+        print(plan_times[-1][1], plan_times[-1][2])
+        print(plan_times[-1][0])
+    print()
+    print("Action Tracker")
+    plan_times = planner.anyhop_random_tracked(state, tasks, max_seconds=max_seconds)
+    print(f"{len(plan_times)} plans")
+    if len(plan_times) > 0:
+        print(plan_times[-1][1], plan_times[-1][2])
+        print(plan_times[-1][0])
+    print()
