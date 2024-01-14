@@ -1,21 +1,10 @@
-# Rewrite this as follows:
-#
-# * The delivery robot has a capacity of a certain number of packages it can carry.
-# * The map is seeded with a potentially differing number of packages, each of which has a destination.
-# * Before planning begins, we compute all-pairs-shortest-paths.
-# * We nondeterministically select packages to deliver equal to the capacity.
-#   * We follow a path to the packages as long as they agree.
-#   * When the paths diverge, we nondeterministically select which way to go. We then "commit" to the packages that
-#     share that path until they are retrieved.
-#   * When a package is retrieved, we nondeterministically select among the delivery destinations and additional
-#     packages.
-#
-# The purpose of this example:
+## The purpose of this example:
 # * Trying to use pyhop to solve simple grid problems with depth-first search is not my concept of its use. It isn't
 #   the right tool for that job, because A* will reliably find the optimal solution in polynomial time.
 # * pyhop is the right tool for a job where the problem is NP-Complete. We can generate a valid solution in
 #   polynomial time but an optimal solution is hard to find. We bring to bear all polynomial-time resources to solve
 #   it, including auxiliary searches specialized to a task.
+
 from pyhop_anytime import State, TaskList, Planner, Facing, Grid, facing_from_to
 import random
 
