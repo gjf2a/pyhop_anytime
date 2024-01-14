@@ -184,6 +184,11 @@ class Grid:
             path.append(self.prev[p2][path[-1]])
         return path
 
+    def next_step_from_to(self, current, goal):
+        if not self.shortest_paths_ready():
+            self.floyd_warshall()
+        return self.prev[goal][current]
+
 
 def show_grid_shortest_paths(grid):
     if not grid.shortest_paths_ready():
@@ -201,4 +206,6 @@ if __name__ == '__main__':
     grid.print_grid()
     show_grid_shortest_paths(grid)
     print(grid.shortest_path_between((0, 0), (grid.width - 1, grid.height - 1)))
+    print({grid.next_step_from_to((2, 1), (x, y)) for x in range(grid.width) for y in range(grid.height)})
+    print([((x, y), grid.next_step_from_to((2, 1), (x, y))) for x in range(grid.width) for y in range(grid.height)])
 

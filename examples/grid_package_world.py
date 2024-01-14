@@ -20,69 +20,57 @@ from pyhop_anytime import State, TaskList, Planner, Facing, Grid, facing_from_to
 import random
 
 
-def deliver_all(state):
-    deliveries = []
-    for package, start in enumerate(state.package_locations):
-        if state.package_goals[package] != start:
-            deliveries.append([('retrieve_package', package), ('deliver_holding',), ('deliver_all',)])
-    if len(deliveries) == 0:
-        return TaskList(completed=True)
+def deliver_all_packages_from(state, current):
+    possibilities = []
+    for package, goal in enumerate(state.package_goals):
+        if state.package_locations[package] != goal:
+            if state.package_goals[package] == 'robot':
+                possibilities.append((package, goal))
+            else:
+                possibilities.append((package, state.package_locations[package]))
+    possibilities.sort()
+    return TaskList([('possible_destinations', current, possibilities)])
+
+
+def possible_destinations(state, current, possibilities):
+    for (package, goal) in possibilities:
+        if current == goal:
+            if state.package_locations[package] == current:
+                return TaskList([('pick_up', package), ('deliver_all_packages_from', current)])
+            elif state.package_goals[package] == current:
+                return TaskList([('put_down', package), ('deliver_all_packages_from', current)])
+            else:
+                assert False
+
+    if len(possibilities) == 0:
+        assert False
+    elif len(possibilities) == 1:
+        package, goal = possibilities[0]
+        task_list = progress_task_list(state, current, state.grid.next_step_from_to(current, goal), possibilities)
+        return TaskList(task_list)
     else:
-        return TaskList(deliveries)
+        options = {}
+        for (package, goal) in possibilities:
+            option = state.grid.next_step_from_to(current, goal)
+            if option not in options:
+                options[option] = []
+            options[option].append((package, goal))
+        tasks = [progress_task_list(state, current, new_current, sorted(new_possible))
+                 for new_current, new_possible in options.items()]
+        return TaskList(tasks)
 
 
-def retrieve_package(state, package):
-    base_option = [('go_to', state.at, state.package_locations[package]), ('pick_up', package)]
-    options = [base_option]
-    if len(state.holding) + 1 < state.capacity:
-        for alt_package, alt_start in enumerate(state.package_locations):
-            if package != alt_package and state.package_goals[alt_package] != alt_start:
-                options.append(base_option + [('retrieve_package', alt_package)])
-    return TaskList(options)
-
-
-def deliver_holding(state):
-    if len(state.holding) == 1:
-        return TaskList([('go_to', state.at, state.package_goals[state.holding[0]]), ('put_down', state.holding[0])])
-    else:
-        options = []
-        for package in state.holding:
-            options.append([('go_to', state.at, state.package_goals[package]), ('put_down', package), ('deliver_holding',)])
-        return TaskList(options)
-
-
-def pick_up(state, package):
-    if state.at == state.package_locations[package] and len(state.holding) < state.capacity:
-        state.package_locations[package] = 'robot'
-        state.holding.append(package)
-        return state
-
-
-def put_down(state, package):
-    if package in state.holding:
-        state.package_locations[package] = state.at
-        state.holding.remove(package)
-        return state
-
-
-def go_to(state, start, end):
-    if state.at == start:
-        path = state.grid.shortest_path_between(start, end)
-        actions = []
-        prev_facing = state.facing
-        for i, current in enumerate(path):
-            if i > 0:
-                prev = path[i - 1]
-                f = facing_from_to(prev, current)
-                if f is None:
-                    return None
-                if f != prev_facing:
-                    actions.append(('turn_to', f))
-                actions.append(('move_one_step', prev, f))
-                prev_facing = f
-        return TaskList(actions)
+def progress_task_list(state, current, new_current, new_possible):
+    task_list = []
+    target_facing = facing_from_to(current, new_current)
+    if state.facing != target_facing:
+        task_list.append(('turn_to', target_facing))
+    task_list.append(('move_one_step', current, target_facing))
+    task_list.append(('possible_destinations', new_current, new_possible))
+    return task_list
 
 ########
+
 
 def in_bounds(state, p):
     return state.grid.within(p)
@@ -107,6 +95,20 @@ def turn_to(state, facing):
     return state
 
 
+def pick_up(state, package):
+    if state.at == state.package_locations[package] and len(state.holding) < state.capacity:
+        state.package_locations[package] = 'robot'
+        state.holding.append(package)
+        return state
+
+
+def put_down(state, package):
+    if package in state.holding:
+        state.package_locations[package] = state.at
+        state.holding.remove(package)
+        return state
+
+
 def generate_grid_world(width, height, start, start_facing, capacity, num_packages, num_obstacles):
     state = State(f"grid_{width}x{height}_{start}_to_{num_obstacles}_obstacles_{num_packages}_packages_{capacity}_capacity")
     state.at = start
@@ -127,13 +129,13 @@ def generate_grid_world(width, height, start, start_facing, capacity, num_packag
         package_goal_candidates.remove(start)
     random.shuffle(package_goal_candidates)
     state.package_goals = package_goal_candidates[:num_packages]
-    return state, [('deliver_all',)]
+    return state, [('deliver_all_packages_from', start)]
 
 
 def make_grid_planner():
     p = Planner()
     p.declare_operators(move_one_step, turn_to, pick_up, put_down)
-    p.declare_methods(deliver_all, retrieve_package, deliver_holding, go_to)
+    p.declare_methods(deliver_all_packages_from, possible_destinations)
     return p
 
 
