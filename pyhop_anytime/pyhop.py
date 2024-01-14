@@ -113,9 +113,11 @@ class Planner:
                                          queue_init=queue_init):
             elapsed_time = time.time() - start_time
             if max_seconds and elapsed_time > max_seconds:
+                print("Ran out of time...")
                 break
             if plan:
                 plan_times.append((plan[0], plan[1], elapsed_time))
+        print(f"anyhop finished after {elapsed_time} seconds.")
         return plan_times
 
     def pyhop_generator(self, state, tasks, verbose=0, disable_branch_bound=False, yield_cost=False,

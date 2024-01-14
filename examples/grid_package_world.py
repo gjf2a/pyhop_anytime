@@ -26,7 +26,7 @@ def deliver_all_packages_from(state, current):
         if state.package_locations[package] != goal:
             if state.package_locations[package] == 'robot':
                 possibilities.append((package, goal))
-            else:
+            elif len(state.holding) < state.capacity:
                 possibilities.append((package, state.package_locations[package]))
     if len(possibilities) == 0:
         return TaskList(completed=True)
@@ -88,13 +88,13 @@ def move_one_step(state, at, facing):
     future = project_towards(state, at, facing)
     if future:
         state.at = future
-        state.just_turned = False
         return state
+    else:
+        assert False
 
 
 def turn_to(state, facing):
     state.facing = facing
-    state.just_turned = True
     return state
 
 
@@ -103,6 +103,8 @@ def pick_up(state, package):
         state.package_locations[package] = 'robot'
         state.holding.append(package)
         return state
+    else:
+        assert False
 
 
 def put_down(state, package):
@@ -110,6 +112,8 @@ def put_down(state, package):
         state.package_locations[package] = state.at
         state.holding.remove(package)
         return state
+    else:
+        assert False
 
 
 def generate_grid_world(width, height, start, start_facing, capacity, num_packages, num_obstacles):
@@ -118,7 +122,6 @@ def generate_grid_world(width, height, start, start_facing, capacity, num_packag
     state.facing = start_facing
     state.width = width
     state.height = height
-    state.just_turned = False
     state.grid = Grid(width, height)
     state.grid.add_random_obstacles(num_obstacles)
     state.capacity = capacity
@@ -151,13 +154,15 @@ if __name__ == '__main__':
     plan_times = planner.anyhop(state, tasks, max_seconds=max_seconds)
     print(f"{len(plan_times)} plans")
     if len(plan_times) > 0:
+        #for step in plan_times[-1][0]:
+        #    print(step)
         print(plan_times[-1][1], plan_times[-1][2])
-        print(plan_times[-1][0])
     print()
     print("Action Tracker")
     plan_times = planner.anyhop_random_tracked(state, tasks, max_seconds=max_seconds)
     print(f"{len(plan_times)} plans")
     if len(plan_times) > 0:
+        #for step in plan_times[-1][0]:
+        #    print(step)
         print(plan_times[-1][1], plan_times[-1][2])
-        print(plan_times[-1][0])
     print()
