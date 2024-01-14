@@ -107,13 +107,17 @@ class Planner:
                queue_init=lambda: SearchStack()):
         start_time = time.time()
         plan_times = []
+        complete_search = True
         for plan in self.pyhop_generator(state, tasks, verbose, disable_branch_bound, yield_cost=True,
                                          queue_init=queue_init):
             elapsed_time = time.time() - start_time
             if max_seconds and elapsed_time > max_seconds:
+                complete_search = False
                 break
             if plan:
                 plan_times.append((plan[0], plan[1], elapsed_time))
+        if complete_search:
+            print("anyhop(): Search complete.")
         return plan_times
 
     def pyhop_generator(self, state, tasks, verbose=0, disable_branch_bound=False, yield_cost=False,
