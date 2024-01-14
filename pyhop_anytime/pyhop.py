@@ -29,8 +29,6 @@ Copyright 2013 Dana S. Nau - http://www.cs.umd.edu/~nau
 import copy
 import time
 
-from pyhop_anytime.incremental_random import IncrementalRandomTracker, OutcomeCounter, ActionTracker, \
-    tracker_successor_key
 from pyhop_anytime.search_queues import *
 import random
 
@@ -191,14 +189,6 @@ class Planner:
         print(f"attempts: {attempts}")
         return plan_times
 
-    def anyhop_random_incremental(self, state, tasks, max_seconds, min_avg_plan_step_count=3, verbose=0,
-                                  show_incremental=False):
-        tracker = IncrementalRandomTracker(self, tasks, state, min_avg_plan_step_count,
-                                           show_incremental=show_incremental)
-        plan_times = tracker.plan(max_seconds, verbose)
-        print(f"attempts: {tracker.attempts} {tracker.progress_report()}")
-        return plan_times
-
     def anyhop_random_tracked(self, state, tasks, max_seconds, verbose=0):
         tracker = ActionTracker(self, tasks, state)
         plan_times = tracker.plan(max_seconds, verbose)
@@ -294,6 +284,121 @@ class PlanStep:
             return result
         else:
             return tuple([result])
+
+
+@total_ordering
+class OutcomeCounter:
+    def __init__(self, total=0, count=0, minimum=None, maximum=None, num_failed=0):
+        self.total = total
+        self.num_succeeded = count
+        self.min = minimum
+        self.max = maximum
+        self.num_failed = num_failed
+
+    def __eq__(self, other):
+        return self.total == other.total and self.num_succeeded == other.num_succeeded and self.min == other.min and self.max == other.max and self.num_failed == other.num_failed
+
+    def __lt__(self, other):
+        if self.num_succeeded == 0 and other.num_succeeded == 0:
+            return self.num_failed < other.num_failed
+        elif self.num_succeeded == 0 and other.num_succeeded > 0:
+            return False
+        elif self.num_succeeded > 0 and other.num_succeeded == 0:
+            return True
+        else:
+            failure_penalty = 2 * max(self.max, other.max)
+            return self.test_mean(failure_penalty) < other.test_mean(failure_penalty)
+
+    def __repr__(self):
+        return f"OutcomeCounter(total={self.total}, count={self.num_succeeded}, minimum={self.min}, maximum={self.max}, num_failed={self.num_failed})"
+
+    def failure(self):
+        self.num_failed += 1
+
+    def record(self, outcome):
+        self.total += outcome
+        self.num_succeeded += 1
+        if self.min is None or self.min > outcome:
+            self.min = outcome
+        if self.max is None or self.max < outcome:
+            self.max = outcome
+
+    def test_mean(self, failure_penalty):
+        return (self.total + self.num_failed * failure_penalty) / (self.num_succeeded + self.num_failed)
+
+    def mean(self):
+        return self.total / self.num_succeeded
+
+
+def tracker_successor_key(successor):
+    return successor.tasks[0]
+
+
+class ActionTracker:
+    def __init__(self, planner, tasks, state):
+        self.planner = planner
+        self.tasks = tasks
+        self.state = state
+        self.action_outcomes = {}
+        self.attempts = 0
+        self.failures = 0
+
+    def plan(self, max_seconds, verbose=0):
+        start_time = time.time()
+        elapsed_time = 0
+        max_cost = None
+        plan_times = []
+        while elapsed_time < max_seconds:
+            plan_step = self.planner.make_action_tracked_plan(self, verbose)
+            elapsed_time = time.time() - start_time
+            self.attempts += 1
+            if plan_step is None:
+                self.failures += 1
+            elif max_cost is None or plan_step.total_cost < max_cost:
+                plan_times.append((plan_step.plan, plan_step.total_cost, elapsed_time))
+                max_cost = plan_step.total_cost
+        return plan_times
+
+    def random_index_from(self, successors):
+        if len(successors) == 1:
+            return successors[0]
+        d = self.distribution_for(successors)
+        r = random.random()
+        for (i, share) in d.items():
+            if share > r:
+                return i
+            else:
+                r -= share
+        assert False
+
+    def distribution_for(self, successors):
+        outcomes = [self.action_outcomes.get(tracker_successor_key(s)) for s in successors]
+        rankable = {i for i in range(len(outcomes)) if outcomes[i] is not None}
+        if len(rankable) > 1:
+            rankings = [(outcomes[i], i) for i in rankable]
+            rankings.sort(key=lambda k: k[0])
+            rankable_budget = len(rankable) / len(outcomes)
+            distribution = {}
+            if len(rankable) < len(outcomes):
+                unrankable_share = (1.0 - rankable_budget) / (len(outcomes) - len(rankable))
+                for i in range(len(outcomes)):
+                    if i not in rankable:
+                        distribution[i] = unrankable_share
+            weights = exponential_decay_distribution(len(rankings), rankable_budget)
+            for r_i, (m, i) in enumerate(rankings):
+                distribution[i] = weights[r_i]
+            assert len(distribution) == len(successors)
+            return distribution
+        else:
+            share = 1.0 / len(successors)
+            return {i: share for i in range(len(successors))}
+
+
+def exponential_decay_distribution(num_samples, budget):
+    weights = [2**(num_samples - i - 1) for i in range(num_samples)]
+    total_weight = sum(weights)
+    return [w * budget / total_weight for w in weights]
+
 
 
 ############################################################

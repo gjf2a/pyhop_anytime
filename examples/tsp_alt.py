@@ -60,9 +60,7 @@ def tsp_experiment(num_cities, max_seconds):
     visited_cost = mst_tour_cost(mst, s.locations)
     print(f"Minimum spanning tree: {mst_size:7.2f}")
     print(f"MST tour cost: {visited_cost:7.2f}\tMST Ratio: {visited_cost / mst_size:7.2f}")
-    #summarize("Random max", mst_size, visited_cost, p.anyhop_random(s, t, use_max_cost=True, max_seconds=max_seconds))
     summarize("Random no-max", mst_size, visited_cost, p.anyhop_random(s, t, use_max_cost=False, max_seconds=max_seconds))
-    #summarize("Random incremental", mst_size, visited_cost, p.anyhop_random_incremental(s, t, max_seconds=max_seconds))
     summarize("Random action tracked", mst_size, visited_cost, p.anyhop_random_tracked(s, t, max_seconds=max_seconds))
 
 
