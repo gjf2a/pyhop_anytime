@@ -24,12 +24,15 @@ def deliver_all_packages_from(state, current):
     possibilities = []
     for package, goal in enumerate(state.package_goals):
         if state.package_locations[package] != goal:
-            if state.package_goals[package] == 'robot':
+            if state.package_locations[package] == 'robot':
                 possibilities.append((package, goal))
             else:
                 possibilities.append((package, state.package_locations[package]))
-    possibilities.sort()
-    return TaskList([('possible_destinations', current, possibilities)])
+    if len(possibilities) == 0:
+        return TaskList(completed=True)
+    else:
+        possibilities.sort()
+        return TaskList([('possible_destinations', current, possibilities)])
 
 
 def possible_destinations(state, current, possibilities):
@@ -129,7 +132,7 @@ def generate_grid_world(width, height, start, start_facing, capacity, num_packag
         package_goal_candidates.remove(start)
     random.shuffle(package_goal_candidates)
     state.package_goals = package_goal_candidates[:num_packages]
-    return state, [('deliver_all_packages_from', start)]
+    return state, [('deliver_all_packages_from', state.at)]
 
 
 def make_grid_planner():
@@ -140,7 +143,7 @@ def make_grid_planner():
 
 
 if __name__ == '__main__':
-    max_seconds = 4
+    max_seconds = 10
     state, tasks = generate_grid_world(5, 5, (2, 2), Facing.NORTH, 2, 3, 30)
     state.grid.print_grid(lambda location: 'P' if location in state.package_locations else 'R' if location == state.at else 'G' if location in state.package_goals else 'O')
     planner = make_grid_planner()
