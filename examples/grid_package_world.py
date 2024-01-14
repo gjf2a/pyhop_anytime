@@ -21,7 +21,7 @@ def deliver_all_packages_from(state, current):
         return TaskList(completed=True)
     else:
         possibilities.sort()
-        return TaskList([('possible_destinations', current, possibilities)])
+        return TaskList([('possible_destinations', current, tuple(possibilities))])
 
 
 def possible_destinations(state, current, possibilities):
@@ -38,8 +38,7 @@ def possible_destinations(state, current, possibilities):
         assert False
     elif len(possibilities) == 1:
         package, goal = possibilities[0]
-        task_list = progress_task_list(state, current, state.grid.next_step_from_to(current, goal), possibilities)
-        return TaskList(task_list)
+        return TaskList([('progress_task_list', current, state.grid.next_step_from_to(current, goal), possibilities)])
     else:
         options = {}
         for (package, goal) in possibilities:
@@ -47,7 +46,7 @@ def possible_destinations(state, current, possibilities):
             if option not in options:
                 options[option] = []
             options[option].append((package, goal))
-        tasks = [progress_task_list(state, current, new_current, sorted(new_possible))
+        tasks = [[('progress_task_list', current, new_current, tuple(sorted(new_possible)))]
                  for new_current, new_possible in options.items()]
         return TaskList(tasks)
 
@@ -59,7 +58,8 @@ def progress_task_list(state, current, new_current, new_possible):
         task_list.append(('turn_to', target_facing))
     task_list.append(('move_one_step', current, target_facing))
     task_list.append(('possible_destinations', new_current, new_possible))
-    return task_list
+    return TaskList(task_list)
+
 
 ########
 
@@ -151,12 +151,12 @@ def copy_grid_state(state):
 def make_grid_planner():
     p = Planner(copy_func=copy_grid_state)
     p.declare_operators(move_one_step, turn_to, pick_up, put_down)
-    p.declare_methods(deliver_all_packages_from, possible_destinations)
+    p.declare_methods(deliver_all_packages_from, possible_destinations, progress_task_list)
     return p
 
 
 if __name__ == '__main__':
-    max_seconds = 10
+    max_seconds = 5
     state, tasks = generate_grid_world(11, 11, (5, 5), Facing.NORTH, 6, 12, 50)
     state.grid.print_grid(lambda location: 'P' if location in state.package_locations else 'R' if location == state.at else 'G' if location in state.package_goals else 'O')
     planner = make_grid_planner()
@@ -164,15 +164,17 @@ if __name__ == '__main__':
     plan_times = planner.anyhop(state, tasks, max_seconds=max_seconds)
     print(f"{len(plan_times)} plans")
     if len(plan_times) > 0:
-        #for step in plan_times[-1][0]:
-        #    print(step)
+        print(plan_times[-1][1], plan_times[-1][2])
+    print()
+    print("Random")
+    plan_times = planner.anyhop_random(state, tasks, use_max_cost=False, max_seconds=max_seconds)
+    print(f"{len(plan_times)} plans")
+    if len(plan_times) > 0:
         print(plan_times[-1][1], plan_times[-1][2])
     print()
     print("Action Tracker")
     plan_times = planner.anyhop_random_tracked(state, tasks, max_seconds=max_seconds)
     print(f"{len(plan_times)} plans")
     if len(plan_times) > 0:
-        #for step in plan_times[-1][0]:
-        #    print(step)
         print(plan_times[-1][1], plan_times[-1][2])
     print()
