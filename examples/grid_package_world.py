@@ -168,7 +168,7 @@ def make_grid_planner():
 
 if __name__ == '__main__':
     max_seconds = 10
-    state, tasks = generate_grid_world(5, 5, (2, 2), Facing.NORTH, 3, 6, 10)
+    state, tasks = generate_grid_world(11, 11, (5, 5), Facing.NORTH, 6, 12, 50)
     state.grid.print_grid(lambda location: 'P' if location in state.package_locations else 'R' if location == state.at else 'G' if location in state.package_goals else 'O')
     planner = make_grid_planner()
     print("Anyhop")
