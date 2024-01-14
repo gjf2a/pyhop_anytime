@@ -138,8 +138,29 @@ def generate_grid_world(width, height, start, start_facing, capacity, num_packag
     return state, [('deliver_all_packages_from', state.at)]
 
 
+def copy_grid_state(state):
+    new_state = State(state.__name__)
+
+    # Unchanging elements
+    new_state.width = state.width
+    new_state.height = state.height
+    new_state.grid = state.grid
+    new_state.capacity = state.capacity
+    new_state.package_goals = state.package_goals
+
+    # Changing scalar elements
+    new_state.at = state.at
+    new_state.facing = state.facing
+
+    # Changing collection elements
+    new_state.holding = state.holding[:]
+    new_state.package_locations = state.package_locations[:]
+
+    return new_state
+
+
 def make_grid_planner():
-    p = Planner()
+    p = Planner(copy_func=copy_grid_state)
     p.declare_operators(move_one_step, turn_to, pick_up, put_down)
     p.declare_methods(deliver_all_packages_from, possible_destinations)
     return p
