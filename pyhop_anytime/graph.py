@@ -19,11 +19,21 @@ class Graph:
         self.edges = []
         self.mst = {}
         self.mst_cost = 0
-        self.dist = {}
-        self.prev = {}
+        self.dist = []
+        self.prev = []
+
+    def print_graph(self, node_char=lambda node: 'O'):
+        for node in range(self.num_nodes()):
+            print(f"{node} ({node_char(node)})", end='')
+            for target, cost in self.edges[node].items():
+                print(f" ({target} [{cost:.2f}])", end='')
+            print()
 
     def num_nodes(self):
         return len(self.nodes)
+
+    def all_nodes(self):
+        return [n for n in range(self.num_nodes())]
 
     def add_edge(self, n1, n2):
         n1_n2 = euclidean_distance(self.nodes[n1], self.nodes[n2])
@@ -88,17 +98,17 @@ class Graph:
     def all_pairs_shortest_paths(self):
         # This implementation of the Floyd-Warshall algorithm is derived from Chapter 22 of:
         # https://books.goalkicker.com/AlgorithmsBook/
-        self.dist = {n: {} for n in self.nodes}
-        self.prev = {n: {} for n in self.nodes}
-        for n1 in self.nodes:
+        self.dist = [{} for _ in range(self.num_nodes())]
+        self.prev = [{} for _ in range(self.num_nodes())]
+        for n1 in range(self.num_nodes()):
             self.dist[n1][n1] = 0
             self.prev[n1][n1] = n1
             for n2, cost in self.edges[n1].items():
                 self.dist[n1][n2] = cost
                 self.prev[n1][n2] = n1
-        for k in self.nodes:
-            for i in self.nodes:
-                for j in self.nodes:
+        for k in range(self.num_nodes()):
+            for i in range(self.num_nodes()):
+                for j in range(self.num_nodes()):
                     i2j = self.dist[i].get(j)
                     i2k = self.dist[i].get(k)
                     k2j = self.dist[k].get(j)
