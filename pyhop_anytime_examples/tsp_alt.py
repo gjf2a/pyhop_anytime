@@ -6,17 +6,19 @@
 # on 50 cities.
 
 from pyhop_anytime import State, TaskList, Planner
-from tsp import euclidean_distance, random_coordinate, spanning_tree, move, summarize, mst_tour_cost, dfs_mst
+from pyhop_anytime.graph import Graph
+from tsp import move, summarize
 
 
 def make_metric_tsp_state(num_cities, width, height):
     state = State(f"tsp_{num_cities}_cities_{width}x{height}")
-    state.locations = [(random_coordinate(width), random_coordinate(height)) for i in range(num_cities)]
+    state.graph = Graph(width, height)
+    state.graph.add_random_nodes_edges(num_cities, 1.0)
     state.at = 0
     state.visited = set()
 
     state.good_edges = set()
-    mst_tour = dfs_mst(spanning_tree(state)[0])
+    mst_tour = state.graph.mst_tsp_tour()
     for i, t_i in enumerate(mst_tour):
         next_one = mst_tour[(i + 1) % len(mst_tour)]
         state.good_edges.add((t_i, next_one))
@@ -26,10 +28,11 @@ def make_metric_tsp_state(num_cities, width, height):
 
 
 def complete_tour_from(state, current):
-    if len(state.visited) == len(state.locations):
+    if len(state.visited) == state.graph.num_nodes():
         return TaskList(completed=True)
+
     tasks = []
-    for city in range(1, len(state.locations)):
+    for city in range(1, state.graph.num_nodes()):
         if city not in state.visited:
             task = [('move', current, city), ('complete_tour_from', city)]
             tasks.append(task)
@@ -43,8 +46,7 @@ def complete_tour_from(state, current):
 
 
 def tsp_planner():
-    planner = Planner(cost_func=lambda state, step: euclidean_distance(state.locations[state.at],
-                                                                       state.locations[step[2]]))
+    planner = Planner(cost_func=lambda state, step: state.graph.edges[state.at][step[2]])
     planner.declare_operators(move)
     planner.declare_methods(complete_tour_from)
     return planner
@@ -54,14 +56,15 @@ def tsp_experiment(num_cities, max_seconds):
     print(f"{num_cities} cities, {max_seconds}s time limit")
     p = tsp_planner()
     s, t = make_metric_tsp_state(num_cities, 200, 200)
-    print(s.locations)
-    mst, mst_size = spanning_tree(s)
-    print(mst)
-    visited_cost = mst_tour_cost(mst, s.locations)
-    print(f"Minimum spanning tree: {mst_size:7.2f}")
-    print(f"MST tour cost: {visited_cost:7.2f}\tMST Ratio: {visited_cost / mst_size:7.2f}")
-    summarize("Random no-max", mst_size, visited_cost, p.anyhop_random(s, t, use_max_cost=False, max_seconds=max_seconds))
-    summarize("Random action tracked", mst_size, visited_cost, p.anyhop_random_tracked(s, t, max_seconds=max_seconds))
+    print(s.graph.nodes)
+    s.graph.minimum_spanning_tree()
+    print(s.graph.mst)
+    tour = s.graph.mst_tsp_tour()
+    visited_cost = s.graph.tour_cost(tour)
+    print(f"Minimum spanning tree: {s.graph.mst_cost:7.2f}")
+    print(f"MST tour cost: {visited_cost:7.2f}\tMST Ratio: {visited_cost / s.graph.mst_cost:7.2f}")
+    summarize("Random", s.graph.mst_cost, visited_cost, p.anyhop_random(s, t, use_max_cost=False, max_seconds=max_seconds))
+    summarize("Random action tracked", s.graph.mst_cost, visited_cost, p.anyhop_random_tracked(s, t, max_seconds=max_seconds))
 
 
 if __name__ == '__main__':
