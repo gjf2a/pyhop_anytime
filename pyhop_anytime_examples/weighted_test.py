@@ -1,4 +1,4 @@
-from examples.tsp import tsp_planner, make_metric_tsp_state
+from pyhop_anytime_examples.tsp import tsp_planner, make_metric_tsp_state
 
 p = tsp_planner()
 s, t = make_metric_tsp_state(4, 10, 10)

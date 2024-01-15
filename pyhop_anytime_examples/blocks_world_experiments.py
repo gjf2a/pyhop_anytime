@@ -1,4 +1,4 @@
-from examples.blocks_world import parse_pddl_blocks, make_blocks_planner
+from pyhop_anytime_examples.blocks_world import parse_pddl_blocks, make_blocks_planner
 
 
 def summarize(header, plans):

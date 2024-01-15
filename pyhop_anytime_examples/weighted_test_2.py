@@ -1,5 +1,5 @@
 from pyhop_anytime import State
-from examples.tsp import tsp_planner
+from pyhop_anytime_examples.tsp import tsp_planner
 
 p = tsp_planner()
 s = State("tsp_4_cities_10x10")
