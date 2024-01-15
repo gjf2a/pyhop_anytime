@@ -10,5 +10,5 @@ setup(
     author='Gabriel Ferrer',
     author_email='ferrer@hendrix.edu',
     license='Apache 2.0',
-    packages=['pyhop_anytime']
+    packages=['pyhop_anytime', 'examples']
 )
