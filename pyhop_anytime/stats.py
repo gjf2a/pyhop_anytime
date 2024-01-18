@@ -10,4 +10,4 @@ def mean_and_bound(values: List[float], num_stdevs: int) -> Tuple[float, float]:
 
 def report_mean_and_bound(values: List[float], num_stdevs: int) -> str:
     xbar, bound = mean_and_bound(values, num_stdevs)
-    return f"{xbar} +/- {bound}"
+    return f"{xbar:.2f} +/- {bound:.2f}"
