@@ -1,7 +1,7 @@
 import math
 import random
 import heapq
-from typing import TypeVar, Tuple, List
+from typing import TypeVar, Tuple, List, Container, Iterable
 
 # Temporary patch until this is implemented: https://peps.python.org/pep-0673/
 Self = TypeVar("Self", bound="Graph")
@@ -128,18 +128,23 @@ class Graph:
             self.all_pairs_shortest_paths()
         return self.prev[goal][current]
 
-    def metric_closure_graph(self) -> Self:
+    def metric_closure_graph(self, nodes_of_interest: Iterable[int]) -> Self:
         if not self.shortest_paths_ready():
             self.all_pairs_shortest_paths()
         metric_closure = Graph(self.width, self.height)
-        for p in self.nodes:
-            metric_closure.nodes.append(p)
+        node_map = {}
+        for n in nodes_of_interest:
+            node_map[n] = len(metric_closure.nodes)
+            metric_closure.nodes.append(self.nodes[n])
         for n1 in self.all_nodes():
             for n2 in self.all_nodes():
-                metric_closure.edges[n1][n2] = self.dist[n1][n2]
+                if n1 in node_map and n2 in node_map:
+                    m1 = node_map[n1]
+                    m2 = node_map[n2]
+                    metric_closure.edges[m1][m2] = self.dist[n1][n2]
         return metric_closure
 
-    def approximate_steiner_cost(self) -> float:
-        mc = self.metric_closure_graph()
+    def approximate_steiner_cost(self, nodes_of_interest: Iterable[int]) -> float:
+        mc = self.metric_closure_graph(nodes_of_interest)
         mc.minimum_spanning_tree()
         return mc.mst_cost
