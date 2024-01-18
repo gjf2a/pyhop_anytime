@@ -136,6 +136,7 @@ class Graph:
         for n in nodes_of_interest:
             node_map[n] = len(metric_closure.nodes)
             metric_closure.nodes.append(self.nodes[n])
+            metric_closure.edges.append({})
         for n1 in self.all_nodes():
             for n2 in self.all_nodes():
                 if n1 in node_map and n2 in node_map:
