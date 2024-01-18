@@ -5,7 +5,7 @@
 #   polynomial time but an optimal solution is hard to find. We bring to bear all polynomial-time resources to solve
 #   it, including auxiliary searches specialized to a task.
 
-from pyhop_anytime import State, TaskList, Planner, Facing, Graph, facing_from_to
+from pyhop_anytime import State, TaskList, Planner, Graph
 import random
 
 
