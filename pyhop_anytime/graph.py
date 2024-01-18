@@ -1,24 +1,28 @@
 import math
 import random
 import heapq
+from typing import TypeVar, Tuple, List
+
+# Temporary patch until this is implemented: https://peps.python.org/pep-0673/
+Self = TypeVar("Self", bound="Graph")
 
 
-def euclidean_distance(p1, p2):
+def euclidean_distance(p1: Tuple[float, float], p2: Tuple[float, float]) -> float:
     return math.sqrt((p2[0] - p1[0])**2 + (p2[1] - p1[1])**2)
 
 
-def random_coordinate(bound):
+def random_coordinate(bound: float) -> float:
     return (random.random() * bound) - bound/2
 
 
 class Graph:
-    def __init__(self, width, height):
+    def __init__(self, width: float, height: float):
         self.width = width
         self.height = height
         self.nodes = []
         self.edges = []
         self.mst = {}
-        self.mst_cost = 0
+        self.mst_cost = 0.0
         self.dist = []
         self.prev = []
 
@@ -29,18 +33,18 @@ class Graph:
                 print(f" ({target} [{cost:.2f}])", end='')
             print()
 
-    def num_nodes(self):
+    def num_nodes(self) -> int:
         return len(self.nodes)
 
-    def all_nodes(self):
+    def all_nodes(self) -> List[int]:
         return [n for n in range(self.num_nodes())]
 
-    def add_edge(self, n1, n2):
+    def add_edge(self, n1: int, n2: int):
         n1_n2 = euclidean_distance(self.nodes[n1], self.nodes[n2])
         self.edges[n1][n2] = n1_n2
         self.edges[n2][n1] = n1_n2
 
-    def add_random_nodes_edges(self, num_nodes, edge_prob):
+    def add_random_nodes_edges(self, num_nodes: int, edge_prob: float):
         self.nodes = [(random_coordinate(self.width), random_coordinate(self.height)) for i in range(num_nodes)]
         self.edges = [{} for _ in range(num_nodes)]
         for n1 in range(len(self.nodes)):
@@ -76,23 +80,23 @@ class Graph:
                                                dest,
                                                successor))
 
-    def mst_ready(self):
+    def mst_ready(self) -> bool:
         return self.num_nodes() == len(self.mst)
 
-    def mst_tsp_tour(self):
+    def mst_tsp_tour(self) -> List[int]:
         if not self.mst_ready():
             self.minimum_spanning_tree()
         visited = []
         self.dfs_mst_from(0, visited)
         return visited
 
-    def dfs_mst_from(self, node, visited):
+    def dfs_mst_from(self, node: int, visited: List[int]):
         if node not in visited:
             visited.append(node)
             for child in self.mst[node]:
                 self.dfs_mst_from(child, visited)
 
-    def tour_cost(self, tour):
+    def tour_cost(self, tour) -> float:
         return sum(self.edges[tour[i]][tour[(i + 1) % len(tour)]] for i in range(len(tour)))
 
     def all_pairs_shortest_paths(self):
@@ -116,10 +120,26 @@ class Graph:
                         self.dist[i][j] = i2k + k2j
                         self.prev[i][j] = self.prev[k][j]
 
-    def shortest_paths_ready(self):
+    def shortest_paths_ready(self) -> bool:
         return len(self.dist) == len(self.nodes)
 
-    def next_step_from_to(self, current, goal):
+    def next_step_from_to(self, current: int, goal: int) -> int:
         if not self.shortest_paths_ready():
             self.all_pairs_shortest_paths()
         return self.prev[goal][current]
+
+    def metric_closure_graph(self) -> Self:
+        if not self.shortest_paths_ready():
+            self.all_pairs_shortest_paths()
+        metric_closure = Graph(self.width, self.height)
+        for p in self.nodes:
+            metric_closure.nodes.append(p)
+        for n1 in self.all_nodes():
+            for n2 in self.all_nodes():
+                metric_closure.edges[n1][n2] = self.dist[n1][n2]
+        return metric_closure
+
+    def approximate_steiner_cost(self) -> float:
+        mc = self.metric_closure_graph()
+        mc.minimum_spanning_tree()
+        return mc.mst_cost
