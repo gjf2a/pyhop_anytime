@@ -1,3 +1,4 @@
+import time
 from typing import List, Tuple, Dict
 import statistics
 
@@ -35,6 +36,7 @@ def report_one(label, plan_times):
 def experiment(num_problems: int, runs_per_problem: int, max_seconds: float, problem_generator,
                non_random_planners: Dict,
                random_planners: Dict):
+    start_time = time.time()
     for i in range(num_problems):
         print(f"Problem {i + 1}")
         state, tasks = problem_generator()
@@ -64,3 +66,5 @@ def experiment(num_problems: int, runs_per_problem: int, max_seconds: float, pro
             print(f"{name}:{' ' * (longest_name_len - len(name))}{report_lo_hi_bounds(costs, 2)}")
         print()
         print()
+    duration = time.time() - start_time
+    print(f"Duration: {duration:.2f}s")

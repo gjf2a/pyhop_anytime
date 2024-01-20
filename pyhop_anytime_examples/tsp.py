@@ -1,6 +1,6 @@
 from pyhop_anytime import State, TaskList, Planner, MonteCarloPlannerHeap
-
 from pyhop_anytime.graph import Graph
+from pyhop_anytime.stats import experiment
 
 
 def make_metric_tsp_state(num_cities, width, height):
@@ -40,8 +40,10 @@ def tsp_planner():
 
 def summarize(header, mst_size, mst_tour_size, plans):
     print(f"{header}: {len(plans)} plans")
-    print(f"First cost {plans[0][1]:7.2f}\tMST Ratio: {plans[0][1] / mst_size:7.2f}\tMST Tour Ratio: {plans[0][1] / mst_tour_size:7.2f}\ttime {plans[0][2]:4.2f}")
-    print(f"Last cost  {plans[-1][1]:7.2f}\tMST Ratio: {plans[-1][1] / mst_size:7.2f}\tMST Tour Ratio: {plans[-1][1] / mst_tour_size:7.2f}\ttime {plans[-1][2]:4.2f}")
+    print(
+        f"First cost {plans[0][1]:7.2f}\tMST Ratio: {plans[0][1] / mst_size:7.2f}\tMST Tour Ratio: {plans[0][1] / mst_tour_size:7.2f}\ttime {plans[0][2]:4.2f}")
+    print(
+        f"Last cost  {plans[-1][1]:7.2f}\tMST Ratio: {plans[-1][1] / mst_size:7.2f}\tMST Tour Ratio: {plans[-1][1] / mst_tour_size:7.2f}\ttime {plans[-1][2]:4.2f}")
 
 
 # Experiment notes:
@@ -70,26 +72,42 @@ def summarize(header, mst_size, mst_tour_size, plans):
 # It looks like throwing in the prefix increases the number of attempts we can make, and in a more favorable part
 # of the search space as well.
 
+
+def make_state_report_mst(num_cities):
+    state, tasks = make_metric_tsp_state(num_cities, 200, 200)
+    tour = state.graph.mst_tsp_tour()
+    visited_cost = state.graph.tour_cost(tour)
+    print(f"Minimum spanning tree: {state.graph.mst_cost:7.2f}")
+    print(f"MST tour cost: {visited_cost:7.2f}\tMST Ratio: {visited_cost / state.graph.mst_cost:7.2f}")
+    return state, tasks
+
+
 def tsp_experiment(num_cities, max_seconds):
     print(f"{num_cities} cities, {max_seconds}s time limit")
     p = tsp_planner()
-    s, t = make_metric_tsp_state(num_cities, 200, 200)
-    print(s.graph.nodes)
-    s.graph.minimum_spanning_tree()
-    print(s.graph.mst)
-    tour = s.graph.mst_tsp_tour()
-    visited_cost = s.graph.tour_cost(tour)
-    print(f"Minimum spanning tree: {s.graph.mst_cost:7.2f}")
-    print(f"MST tour cost: {visited_cost:7.2f}\tMST Ratio: {visited_cost / s.graph.mst_cost:7.2f}")
-    summarize("DFS", s.graph.mst_cost, visited_cost, p.anyhop(s, t, max_seconds=max_seconds))
-    summarize("Random", s.graph.mst_cost, visited_cost, p.anyhop_random(s, t, use_max_cost=False, max_seconds=max_seconds))
-    summarize("Random action tracked", s.graph.mst_cost, visited_cost, p.anyhop_random_tracked(s, t, max_seconds=max_seconds))
-    #summarize("MC", p.anyhop(s, t, max_seconds=3, queue_init=lambda: MonteCarloPlannerHeap(p, go_deep_first=False)))
-    #summarize("MC go deep", p.anyhop(s, t, max_seconds=3, queue_init=lambda: MonteCarloPlannerHeap(p, go_deep_first=True)))
+    experiment(num_problems=2,
+               runs_per_problem=3,
+               max_seconds=max_seconds,
+               problem_generator=lambda: make_state_report_mst(num_cities),
+               non_random_planners={"DFS": lambda state, tasks, max_seconds: p.anyhop(state, tasks,
+                                                                                      max_seconds=max_seconds)},
+               random_planners={
+                   "Random": lambda state, tasks, max_seconds: p.anyhop_random(state, tasks, use_max_cost=False,
+                                                                               max_seconds=max_seconds),
+                   "Tracker1": lambda state, tasks, max_seconds: p.anyhop_random_tracked(state, tasks,
+                                                                                         ignore_single=True,
+                                                                                         max_seconds=max_seconds),
+                   "Tracker2": lambda state, tasks, max_seconds: p.anyhop_random_tracked(state, tasks,
+                                                                                         ignore_single=False,
+                                                                                         max_seconds=max_seconds)
+               }
+               )
 
 
 if __name__ == '__main__':
     tsp_experiment(25, 5)
+    print()
+    print()
     tsp_experiment(50, 30)
 
 # A representative run
@@ -134,4 +152,3 @@ if __name__ == '__main__':
 # Random incremental: 14 plans
 # First cost 4692.73	MST Ratio:    4.97	time 0.01
 # Last cost  3404.81	MST Ratio:    3.60	time 25.94
-

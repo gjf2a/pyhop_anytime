@@ -133,16 +133,21 @@ def make_graph_planner():
 
 if __name__ == '__main__':
     planner = make_graph_planner()
-    experiment(2, 3, 2,
-               lambda: generate_graph_world(100, 100, capacity=3, num_locations=36, edge_prob=0.25, num_packages=12),
-               {"DFS": lambda state, tasks, max_seconds: planner.anyhop(state, tasks, max_seconds=max_seconds)},
-               {"Random": lambda state, tasks, max_seconds: planner.anyhop_random(state, tasks, use_max_cost=False,
-                                                                                  max_seconds=max_seconds),
-                "Tracker1": lambda state, tasks, max_seconds: planner.anyhop_random_tracked(state, tasks,
-                                                                                            ignore_single=True,
-                                                                                            max_seconds=max_seconds),
-                "Tracker2": lambda state, tasks, max_seconds: planner.anyhop_random_tracked(state, tasks,
-                                                                                            ignore_single=False,
-                                                                                            max_seconds=max_seconds)
-                }
+    experiment(num_problems=2,
+               runs_per_problem=3,
+               max_seconds=2,
+               problem_generator=lambda: generate_graph_world(100, 100, capacity=3, num_locations=36, edge_prob=0.25,
+                                                              num_packages=12),
+               non_random_planners={"DFS": lambda state, tasks, max_seconds: planner.anyhop(state, tasks,
+                                                                                            max_seconds=max_seconds)},
+               random_planners={
+                   "Random": lambda state, tasks, max_seconds: planner.anyhop_random(state, tasks, use_max_cost=False,
+                                                                                     max_seconds=max_seconds),
+                   "Tracker1": lambda state, tasks, max_seconds: planner.anyhop_random_tracked(state, tasks,
+                                                                                               ignore_single=True,
+                                                                                               max_seconds=max_seconds),
+                   "Tracker2": lambda state, tasks, max_seconds: planner.anyhop_random_tracked(state, tasks,
+                                                                                               ignore_single=False,
+                                                                                               max_seconds=max_seconds)
+               }
                )
