@@ -1,27 +1,8 @@
 import time
 from typing import List, Tuple, Dict
 import statistics
-
-
-def mean_and_bound(values: List[float], num_stdevs: int) -> Tuple[float, float]:
-    xbar = statistics.mean(values)
-    bound = num_stdevs * statistics.stdev(values, xbar)
-    return xbar, bound
-
-
-def report_mean_and_bound(values: List[float], num_stdevs: int) -> str:
-    xbar, bound = mean_and_bound(values, num_stdevs)
-    return f"{xbar:.2f} +/- {bound:.2f}"
-
-
-def lo_hi_bounds(values: List[float], num_stdevs: int) -> Tuple[float, float, float]:
-    xbar, bound = mean_and_bound(values, num_stdevs)
-    return xbar - bound, xbar, xbar + bound
-
-
-def report_lo_hi_bounds(values: List[float], num_stdevs: int) -> str:
-    lo, mean, hi = lo_hi_bounds(values, num_stdevs)
-    return f"({lo:.2f}, {mean:.2f}, {hi:.2f})"
+import numpy as np
+import scipy.stats as st
 
 
 def report_one(label, plan_times):
@@ -31,6 +12,16 @@ def report_one(label, plan_times):
         print(f"steps: {plan_times[-1][1]:.2f} ({plan_times[-1][2]:.2f}s)")
         print()
         return plan_times[-1][1]
+
+
+def report_confidence_interval(values: List[float]):
+    # From https://scales.arabpsychology.com/stats/calculate-confidence-intervals-in-python/
+    mean = np.mean(values)
+    if len(values) < 30:
+        lo, hi = st.t.interval(0.95, df=len(values) - 1, loc=mean, scale=st.sem(values))
+    else:
+        lo, hi = st.norm.interval(0.95, df=len(values) - 1, loc=mean, scale=st.sem(values))
+    return f"95% confidence interval: ({lo:.2f}, {mean:.2f}, {hi:.2f})"
 
 
 def experiment(num_problems: int, runs_per_problem: int, max_seconds: float, problem_generator,
@@ -63,7 +54,7 @@ def experiment(num_problems: int, runs_per_problem: int, max_seconds: float, pro
         for name, cost in non_random_costs.items():
             print(f"{name}:{' ' * (longest_name_len - len(name))}{cost}")
         for name, costs in random_costs.items():
-            print(f"{name}:{' ' * (longest_name_len - len(name))}{report_lo_hi_bounds(costs, 2)}")
+            print(f"{name}:{' ' * (longest_name_len - len(name))}{report_confidence_interval(costs)}")
         print()
         print()
     duration = time.time() - start_time
