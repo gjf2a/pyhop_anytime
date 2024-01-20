@@ -216,10 +216,8 @@ class Planner:
             successors = candidate.successors(self)
             if len(successors) == 0:
                 candidate = None
-            elif len(successors) == 1:
-                candidate = successors[0]
             else:
-                chosen_index = action_tracker.random_index_from(successors)
+                chosen_index = 0 if len(successors) == 1 else action_tracker.random_index_from(successors)
                 chosen_methods.append(tracker_successor_key(successors[chosen_index]))
                 candidate = successors[chosen_index]
 
