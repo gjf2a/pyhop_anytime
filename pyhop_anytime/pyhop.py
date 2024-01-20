@@ -193,9 +193,9 @@ class Planner:
         print(f"attempts: {attempts}")
         return plan_times
 
-    def anyhop_random_tracked(self, state, tasks, max_seconds, verbose=0):
+    def anyhop_random_tracked(self, state, tasks, max_seconds, ignore_single=True, verbose=0):
         tracker = ActionTracker(self, tasks, state)
-        plan_times = tracker.plan(max_seconds, verbose)
+        plan_times = tracker.plan(max_seconds, ignore_single, verbose)
         print(f"attempts: {tracker.attempts} (failures: {tracker.failures})")
         return plan_times
 
@@ -208,7 +208,7 @@ class Planner:
                 plans.append(plan)
         return plans
 
-    def make_action_tracked_plan(self, action_tracker, verbose):
+    def make_action_tracked_plan(self, action_tracker, verbose, ignore_single):
         self.verbose = verbose
         candidate = PlanStep([], action_tracker.tasks, action_tracker.state, self.copy_func, self.cost_func)
         chosen_methods = []
@@ -216,9 +216,10 @@ class Planner:
             successors = candidate.successors(self)
             if len(successors) == 0:
                 candidate = None
+            elif ignore_single and len(successors) == 1:
+                candidate = successors[0]
             else:
                 chosen_index = 0 if len(successors) == 1 else action_tracker.random_index_from(successors)
-                assert type(chosen_index) == int
                 candidate = successors[chosen_index]
                 if len(candidate.tasks) > 0:
                     chosen_methods.append(tracker_successor_key(candidate))
@@ -347,13 +348,13 @@ class ActionTracker:
         self.attempts = 0
         self.failures = 0
 
-    def plan(self, max_seconds, verbose=0):
+    def plan(self, max_seconds, ignore_single, verbose=0):
         start_time = time.time()
         elapsed_time = 0
         max_cost = None
         plan_times = []
         while elapsed_time < max_seconds:
-            plan_step = self.planner.make_action_tracked_plan(self, verbose)
+            plan_step = self.planner.make_action_tracked_plan(self, verbose, ignore_single)
             elapsed_time = time.time() - start_time
             self.attempts += 1
             if plan_step is None:
