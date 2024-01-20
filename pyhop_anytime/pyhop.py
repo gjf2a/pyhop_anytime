@@ -217,9 +217,12 @@ class Planner:
             if len(successors) == 0:
                 candidate = None
             else:
-                chosen_index = 0 if len(successors) == 1 else action_tracker.random_index_from(successors)
-                chosen_methods.append(tracker_successor_key(successors[chosen_index]))
+                chosen_index = action_tracker.random_index_from(successors)
                 candidate = successors[chosen_index]
+                if len(candidate.tasks) == 0:
+                    print(f"candidate: {candidate}")
+                else:
+                    chosen_methods.append(tracker_successor_key(candidate))
 
         for choice in chosen_methods:
             if choice not in action_tracker.action_outcomes:
