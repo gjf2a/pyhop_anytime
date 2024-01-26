@@ -39,6 +39,9 @@ class Graph:
     def all_nodes(self) -> List[Hashable]:
         return list(self.nodes.keys())
 
+    def add_node(self, name: Hashable, value: Tuple[float,float]):
+        self.nodes[name] = value
+
     def add_edge(self, n1: Hashable, n2: Hashable):
         n1_n2 = euclidean_distance(self.nodes[n1], self.nodes[n2])
         self.edges[n1][n2] = n1_n2
