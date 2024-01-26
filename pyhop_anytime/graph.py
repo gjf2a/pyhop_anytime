@@ -1,7 +1,7 @@
 import math
 import random
 import heapq
-from typing import TypeVar, Tuple, List, Container, Iterable
+from typing import TypeVar, Tuple, List, Container, Iterable, Hashable
 
 # Temporary patch until this is implemented: https://peps.python.org/pep-0673/
 Self = TypeVar("Self", bound="Graph")
@@ -19,8 +19,8 @@ class Graph:
     def __init__(self, width: float, height: float):
         self.width = width
         self.height = height
-        self.nodes = []
-        self.edges = []
+        self.nodes = {}
+        self.edges = {}
         self.mst = {}
         self.mst_cost = 0.0
         self.dist = []
@@ -36,17 +36,17 @@ class Graph:
     def num_nodes(self) -> int:
         return len(self.nodes)
 
-    def all_nodes(self) -> List[int]:
-        return [n for n in range(self.num_nodes())]
+    def all_nodes(self) -> List[Hashable]:
+        return list(self.nodes.keys())
 
-    def add_edge(self, n1: int, n2: int):
+    def add_edge(self, n1: Hashable, n2: Hashable):
         n1_n2 = euclidean_distance(self.nodes[n1], self.nodes[n2])
         self.edges[n1][n2] = n1_n2
         self.edges[n2][n1] = n1_n2
 
     def add_random_nodes_edges(self, num_nodes: int, edge_prob: float):
-        self.nodes = [(random_coordinate(self.width), random_coordinate(self.height)) for i in range(num_nodes)]
-        self.edges = [{} for _ in range(num_nodes)]
+        self.nodes = {i: (random_coordinate(self.width), random_coordinate(self.height)) for i in range(num_nodes)}
+        self.edges = {i: {} for i in range(num_nodes)}
         for n1 in range(len(self.nodes)):
             for n2 in range(n1 + 1, len(self.nodes)):
                 if random.random() < edge_prob:
@@ -54,18 +54,17 @@ class Graph:
         for n in range(len(self.nodes)):
             if len(self.edges[n]) == 0:
                 r = random.randint(0, num_nodes - 1)
-                while r != n:
+                while r == n:
                     r = random.randint(0, num_nodes - 1)
                 self.add_edge(n, r)
 
     # Adapted from: https://reintech.io/blog/pythonic-way-of-implementing-kruskals-algorithm
     # In spite of what the author above says, this is actually Prim's Algorithm.
     def minimum_spanning_tree(self):
-        num_nodes = len(self.nodes)
         edges = [(cost, 0, dest) for dest, cost in self.edges[0].items()]
         heapq.heapify(edges)
-        visited = {0}
-        self.mst = {i: [] for i in range(num_nodes)}
+        visited = {next(iter(self.nodes))}
+        self.mst = {key: [] for key in self.all_nodes()}
         self.mst_cost = 0
 
         while edges:
@@ -74,11 +73,9 @@ class Graph:
                 visited.add(dest)
                 self.mst[src].append(dest)
                 self.mst_cost += cost
-                for successor in range(num_nodes):
+                for successor, distance in self.edges[dest].items():
                     if successor not in visited:
-                        heapq.heappush(edges, (euclidean_distance(self.nodes[dest], self.nodes[successor]),
-                                               dest,
-                                               successor))
+                        heapq.heappush(edges, (distance, dest, successor))
 
     def mst_ready(self) -> bool:
         return self.num_nodes() == len(self.mst)
@@ -102,17 +99,17 @@ class Graph:
     def all_pairs_shortest_paths(self):
         # This implementation of the Floyd-Warshall algorithm is derived from Chapter 22 of:
         # https://books.goalkicker.com/AlgorithmsBook/
-        self.dist = [{} for _ in range(self.num_nodes())]
-        self.prev = [{} for _ in range(self.num_nodes())]
-        for n1 in range(self.num_nodes()):
+        self.dist = {key: {} for key in self.all_nodes()}
+        self.prev = {key: {} for key in self.all_nodes()}
+        for n1 in self.all_nodes():
             self.dist[n1][n1] = 0
             self.prev[n1][n1] = n1
             for n2, cost in self.edges[n1].items():
                 self.dist[n1][n2] = cost
                 self.prev[n1][n2] = n1
-        for k in range(self.num_nodes()):
-            for i in range(self.num_nodes()):
-                for j in range(self.num_nodes()):
+        for k in self.all_nodes():
+            for i in self.all_nodes():
+                for j in self.all_nodes():
                     i2j = self.dist[i].get(j)
                     i2k = self.dist[i].get(k)
                     k2j = self.dist[k].get(j)
