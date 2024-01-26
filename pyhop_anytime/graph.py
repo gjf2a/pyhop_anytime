@@ -40,6 +40,8 @@ class Graph:
         return list(self.nodes.keys())
 
     def add_node(self, name: Hashable, value: Tuple[float,float]):
+        # TODO: This should modify width and height as needed.
+        # This may require some reconceptualization.
         self.nodes[name] = value
 
     def add_edge(self, n1: Hashable, n2: Hashable):
