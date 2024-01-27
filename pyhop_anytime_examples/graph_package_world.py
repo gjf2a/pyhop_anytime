@@ -81,8 +81,8 @@ def generate_graph_world(width, height, capacity, num_locations, edge_prob, num_
     state.at = 0
     state.width = width
     state.height = height
-    state.graph = Graph(width, height)
-    state.graph.add_random_nodes_edges(num_locations, edge_prob)
+    state.graph = Graph()
+    state.graph.add_random_nodes_edges(num_locations, edge_prob, width, height)
     state.capacity = capacity
     state.holding = []
 

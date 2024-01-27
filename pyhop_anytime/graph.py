@@ -16,15 +16,13 @@ def random_coordinate(bound: float) -> float:
 
 
 class Graph:
-    def __init__(self, width: float, height: float):
-        self.width = width
-        self.height = height
+    def __init__(self):
         self.nodes = {}
         self.edges = {}
         self.mst = {}
         self.mst_cost = 0.0
-        self.dist = []
-        self.prev = []
+        self.dist = {}
+        self.prev = {}
 
     def print_graph(self, node_char=lambda node: 'O'):
         for node in range(self.num_nodes()):
@@ -40,8 +38,6 @@ class Graph:
         return list(self.nodes.keys())
 
     def add_node(self, name: Hashable, value: Tuple[float,float]):
-        # TODO: This should modify width and height as needed.
-        # This may require some reconceptualization.
         self.nodes[name] = value
 
     def add_edge(self, n1: Hashable, n2: Hashable):
@@ -49,8 +45,8 @@ class Graph:
         self.edges[n1][n2] = n1_n2
         self.edges[n2][n1] = n1_n2
 
-    def add_random_nodes_edges(self, num_nodes: int, edge_prob: float):
-        self.nodes = {i: (random_coordinate(self.width), random_coordinate(self.height)) for i in range(num_nodes)}
+    def add_random_nodes_edges(self, num_nodes: int, edge_prob: float, width: float, height: float):
+        self.nodes = {i: (random_coordinate(width), random_coordinate(height)) for i in range(num_nodes)}
         self.edges = {i: {} for i in range(num_nodes)}
         for n1 in range(len(self.nodes)):
             for n2 in range(n1 + 1, len(self.nodes)):
@@ -130,24 +126,20 @@ class Graph:
             self.all_pairs_shortest_paths()
         return self.prev[goal][current]
 
-    def metric_closure_graph(self, nodes_of_interest: Iterable[int]) -> Self:
+    def metric_closure_graph(self, nodes_of_interest: Iterable[Hashable]) -> Self:
         if not self.shortest_paths_ready():
             self.all_pairs_shortest_paths()
-        metric_closure = Graph(self.width, self.height)
-        node_map = {}
+        metric_closure = Graph()
         for n in nodes_of_interest:
-            node_map[n] = len(metric_closure.nodes)
-            metric_closure.nodes.append(self.nodes[n])
-            metric_closure.edges.append({})
+            metric_closure.nodes[n] = self.nodes[n]
+            metric_closure.edges[n] = {}
         for n1 in self.all_nodes():
             for n2 in self.all_nodes():
-                if n1 in node_map and n2 in node_map:
-                    m1 = node_map[n1]
-                    m2 = node_map[n2]
-                    metric_closure.edges[m1][m2] = self.dist[n1][n2]
+                if n1 != n2 and n1 in nodes_of_interest and n2 in nodes_of_interest:
+                    metric_closure.edges[n1][n2] = self.dist[n1][n2]
         return metric_closure
 
-    def approximate_steiner_cost(self, nodes_of_interest: Iterable[int]) -> float:
+    def approximate_steiner_cost(self, nodes_of_interest: Iterable[Hashable]) -> float:
         mc = self.metric_closure_graph(nodes_of_interest)
         mc.minimum_spanning_tree()
         return mc.mst_cost
