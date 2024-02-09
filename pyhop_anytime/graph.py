@@ -25,8 +25,8 @@ class Graph:
         self.prev = {}
 
     def print_graph(self, node_char=lambda node: 'O'):
-        for node in range(self.num_nodes()):
-            print(f"{node} ({node_char(node)})", end='')
+        for node, value in self.num_nodes().items():
+            print(f"{node} ({value})", end='')
             for target, cost in self.edges[node].items():
                 print(f" ({target} [{cost:.2f}])", end='')
             print()
@@ -39,6 +39,7 @@ class Graph:
 
     def add_node(self, name: Hashable, value: Tuple[float,float]):
         self.nodes[name] = value
+        self.edges[name] = {}
 
     def add_edge(self, n1: Hashable, n2: Hashable):
         n1_n2 = euclidean_distance(self.nodes[n1], self.nodes[n2])
