@@ -5,8 +5,8 @@ from pyhop_anytime.stats import experiment
 
 def make_metric_tsp_state(num_cities, width, height):
     state = State(f"tsp_{num_cities}_cities_{width}x{height}")
-    state.graph = Graph(width, height)
-    state.graph.add_random_nodes_edges(num_cities, 1.0)
+    state.graph = Graph()
+    state.graph.add_random_nodes_edges(num_cities, 1.0, width, height)
     state.at = 0
     state.visited = set()
     return state, [('complete_tour_from', 0)]
