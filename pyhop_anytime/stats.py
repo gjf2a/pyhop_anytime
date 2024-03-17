@@ -1,5 +1,5 @@
 import time
-from typing import List, Dict
+from typing import *
 import numpy as np
 import scipy.stats as st
 
@@ -13,19 +13,27 @@ def report_one(label: str, plan_times) -> float:
         return plan_times[-1][1]
 
 
-def report_confidence_interval(values: List[float]):
+def get_confidence_interval(values: List[float]) -> Tuple[float, float, float]:
     # From https://scales.arabpsychology.com/stats/calculate-confidence-intervals-in-python/
     mean = np.mean(values)
     if len(values) < 30:
         lo, hi = st.t.interval(0.95, df=len(values) - 1, loc=mean, scale=st.sem(values))
     else:
         lo, hi = st.norm.interval(0.95, df=len(values) - 1, loc=mean, scale=st.sem(values))
+    return lo, mean, hi
+
+
+def report_confidence_interval(values: List[float]):
+    lo, mean, hi = get_confidence_interval(values)
     return f"95% confidence interval: ({lo:.2f}, {mean:.2f}, {hi:.2f})"
 
 
 def experiment(num_problems: int, runs_per_problem: int, max_seconds: float, problem_generator,
                non_random_planners: Dict,
-               random_planners: Dict):
+               random_planners: Dict) -> Dict[str, np.ndarray]:
+    result = {}
+    for name in list(non_random_planners) + list(random_planners):
+        result[name] = np.zeros((num_problems, 2))
     start_time = time.time()
     for i in range(num_problems):
         print(f"Problem {i + 1}")
@@ -52,9 +60,16 @@ def experiment(num_problems: int, runs_per_problem: int, max_seconds: float, pro
         longest_name_len = max(longest_name_len, max(len(name) for name in random_costs))
         for name, cost in non_random_costs.items():
             print(f"{name}:{' ' * (longest_name_len - len(name))}{cost}")
+            result[name][i][0] = cost
+            result[name][i][1] = 0
         for name, costs in random_costs.items():
             print(f"{name}:{' ' * (longest_name_len - len(name))}{report_confidence_interval(costs)}")
+            lo, mean, hi = get_confidence_interval(costs)
+            result[name][i][0] = mean
+            result[name][i][1] = hi - mean
+
         print()
         print()
     duration = time.time() - start_time
     print(f"Duration: {duration:.2f}s")
+    return result
