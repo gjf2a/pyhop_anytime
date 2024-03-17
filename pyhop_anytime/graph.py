@@ -25,7 +25,7 @@ class Graph:
         self.prev = {}
 
     def print_graph(self, node_char=lambda node: 'O'):
-        for node, value in self.num_nodes().items():
+        for node, value in self.nodes.items():
             print(f"{node} ({value})", end='')
             for target, cost in self.edges[node].items():
                 print(f" ({target} [{cost:.2f}])", end='')

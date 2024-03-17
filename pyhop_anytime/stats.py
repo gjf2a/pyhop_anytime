@@ -1,11 +1,10 @@
 import time
-from typing import List, Tuple, Dict
-import statistics
+from typing import List, Dict
 import numpy as np
 import scipy.stats as st
 
 
-def report_one(label, plan_times):
+def report_one(label: str, plan_times) -> float:
     print(label)
     print(f"{len(plan_times)} plans")
     if len(plan_times) > 0:
