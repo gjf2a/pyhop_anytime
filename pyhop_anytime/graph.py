@@ -60,6 +60,24 @@ class Graph:
                     r = random.randint(0, num_nodes - 1)
                 self.add_edge(n, r)
 
+    def has_edge(self, n1: Hashable, n2: Hashable) -> bool:
+        return n2 in self.edges[n1]
+
+    def closest_node(self, x: float, y: float) -> Tuple[str,float]:
+        closest_name = None
+        closest_dist = None
+        for name, (n_x, n_y) in self.nodes.items():
+            dist = euclidean_distance((x, y), (n_x, n_y))
+            if closest_dist is None or dist < closest_dist:
+                closest_dist = dist
+                closest_name = name
+        return closest_name, closest_dist
+
+    def closest_node_within(self, x: float, y: float, max_dist: float) -> str:
+        name, dist = self.closest_node(x, y)
+        if dist is not None and dist <= max_dist:
+            return name
+
     # Adapted from: https://reintech.io/blog/pythonic-way-of-implementing-kruskals-algorithm
     # In spite of what the author above says, this is actually Prim's Algorithm.
     def minimum_spanning_tree(self):
