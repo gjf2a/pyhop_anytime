@@ -33,42 +33,6 @@ from pyhop_anytime.search_queues import *
 import random
 
 
-class State:
-    def __init__(self, name):
-        self.__name__ = name
-
-    def __repr__(self):
-        return '\n'.join([f"{self.__name__}.{name} = {val}" for (name, val) in vars(self).items() if name != "__name__"])
-
-
-class TaskList:
-    def __init__(self, options=None, completed=False):
-        self.completed = completed
-        if options and len(options) > 0:
-            self.options = options if type(options[0]) == list else [options]
-        else:
-            self.options = [[]] if completed else []
-
-    def __repr__(self):
-        return f"TaskList(options={self.options},completed={self.completed})"
-
-    def add_option(self, option):
-        self.options.append(option)
-
-    def add_options(self, option_seq):
-        for option in option_seq:
-            self.add_option(option)
-
-    def complete(self):
-        return self.completed
-
-    def failed(self):
-        return len(self.options) == 0 and not self.completed
-
-    def in_progress(self):
-        return not self.complete() and not self.failed()
-
-
 class Planner:
     def __init__(self, verbose=0, copy_func=copy.deepcopy, cost_func=lambda state, step: 1):
         self.copy_func = copy_func
@@ -244,6 +208,42 @@ class Planner:
             else:
                 action_tracker.action_outcomes[choice].record(candidate.total_cost)
         return candidate
+
+
+class State:
+    def __init__(self, name):
+        self.__name__ = name
+
+    def __repr__(self):
+        return '\n'.join([f"{self.__name__}.{name} = {val}" for (name, val) in vars(self).items() if name != "__name__"])
+
+
+class TaskList:
+    def __init__(self, options=None, completed=False):
+        self.completed = completed
+        if options and len(options) > 0:
+            self.options = options if type(options[0]) == list else [options]
+        else:
+            self.options = [[]] if completed else []
+
+    def __repr__(self):
+        return f"TaskList(options={self.options},completed={self.completed})"
+
+    def add_option(self, option):
+        self.options.append(option)
+
+    def add_options(self, option_seq):
+        for option in option_seq:
+            self.add_option(option)
+
+    def complete(self):
+        return self.completed
+
+    def failed(self):
+        return len(self.options) == 0 and not self.completed
+
+    def in_progress(self):
+        return not self.complete() and not self.failed()
 
 
 class PlanStep:
