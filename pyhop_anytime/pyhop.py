@@ -194,8 +194,20 @@ class Planner:
         return plan_times
 
     def anyhop_random_tracked(self, state, tasks, max_seconds, ignore_single=True, verbose=0):
-        tracker = ActionTracker(self, tasks, state)
-        plan_times = tracker.plan(max_seconds, ignore_single, verbose)
+        tracker = ActionTracker(tasks, state)
+        start_time = time.time()
+        elapsed_time = 0
+        max_cost = None
+        plan_times = []
+        while elapsed_time < max_seconds:
+            plan_step = self.make_action_tracked_plan(tracker, verbose, ignore_single)
+            elapsed_time = time.time() - start_time
+            tracker.attempts += 1
+            if plan_step is None:
+                tracker.failures += 1
+            elif max_cost is None or plan_step.total_cost < max_cost:
+                plan_times.append((plan_step.plan, plan_step.total_cost, elapsed_time))
+                max_cost = plan_step.total_cost
         print(f"attempts: {tracker.attempts} (failures: {tracker.failures})")
         return plan_times
 
@@ -340,29 +352,12 @@ def tracker_successor_key(successor):
 
 
 class ActionTracker:
-    def __init__(self, planner, tasks, state):
-        self.planner = planner
+    def __init__(self, tasks, state):
         self.tasks = tasks
         self.state = state
         self.action_outcomes = {}
         self.attempts = 0
         self.failures = 0
-
-    def plan(self, max_seconds, ignore_single, verbose=0):
-        start_time = time.time()
-        elapsed_time = 0
-        max_cost = None
-        plan_times = []
-        while elapsed_time < max_seconds:
-            plan_step = self.planner.make_action_tracked_plan(self, verbose, ignore_single)
-            elapsed_time = time.time() - start_time
-            self.attempts += 1
-            if plan_step is None:
-                self.failures += 1
-            elif max_cost is None or plan_step.total_cost < max_cost:
-                plan_times.append((plan_step.plan, plan_step.total_cost, elapsed_time))
-                max_cost = plan_step.total_cost
-        return plan_times
 
     def random_index_from(self, successors):
         if len(successors) == 1:
