@@ -164,14 +164,14 @@ class Planner:
         max_cost = None
         plan_times = []
         while elapsed_time < max_seconds:
-            plan_step = self.make_action_tracked_plan(tracker, verbose, ignore_single)
+            plan = self.make_action_tracked_plan(tracker, verbose, ignore_single)
             elapsed_time = time.time() - start_time
             tracker.attempts += 1
-            if plan_step is None:
+            if plan is None:
                 tracker.failures += 1
-            elif max_cost is None or plan_step.total_cost < max_cost:
-                plan_times.append((plan_step.plan, plan_step.total_cost, elapsed_time))
-                max_cost = plan_step.total_cost
+            elif max_cost is None or plan.total_cost < max_cost:
+                plan_times.append((plan.plan, plan.total_cost, elapsed_time))
+                max_cost = plan.total_cost
         print(f"attempts: {tracker.attempts} (failures: {tracker.failures})")
         return plan_times
 
