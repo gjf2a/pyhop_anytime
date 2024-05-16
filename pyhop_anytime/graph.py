@@ -42,7 +42,7 @@ class Graph:
         self.edges[name] = {}
 
     def add_edge(self, n1: Hashable, n2: Hashable):
-        n1_n2 = euclidean_distance(self.nodes[n1], self.nodes[n2])
+        n1_n2: float = euclidean_distance(self.nodes[n1], self.nodes[n2])
         self.edges[n1][n2] = n1_n2
         self.edges[n2][n1] = n1_n2
 
