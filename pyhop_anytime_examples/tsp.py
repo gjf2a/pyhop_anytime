@@ -1,4 +1,5 @@
 import os
+import random
 
 from pyhop_anytime import State, TaskList, Planner
 from pyhop_anytime.graph import Graph
@@ -36,12 +37,7 @@ def complete_tour_from(state, current_city):
 
 
 def tsp_planner():
-    def cost_func(state, step):
-        print(state.graph.edges[state.at])
-        print("cost_func()", state.at, step[2])
-        return state.graph.edges[state.at][step[2]]
     planner = Planner(cost_func=lambda state, step: state.graph.edges[state.at][step[2]])
-    #planner = Planner(cost_func=cost_func)
     planner.declare_operators(move)
     planner.declare_methods(complete_tour_from)
     return planner
@@ -80,10 +76,11 @@ def tsp2graph(filename: str) -> Graph:
         return result
 
 
-def tsp2planning(filename: str):
+def tsp2planning(filename: str, random_start_city=False):
     state = State(f"{filename}")
     state.graph = tsp2graph(filename)
-    state.at = state.graph.all_nodes()[0]
+    city = random.randint(0, state.graph.num_nodes() - 1) if random_start_city else 0
+    state.at = state.graph.all_nodes()[city]
     return tsp_kickoff(state)
 
 
@@ -112,8 +109,8 @@ def tsp_experiment(num_cities, max_seconds):
 if __name__ == '__main__':
     print("att48.tsp experiment")
     p = tsp_planner()
-    experiment(num_problems=1, runs_per_problem=2, max_seconds=3,
-               problem_generator=lambda: tsp2planning("att48.tsp"),
+    experiment(num_problems=2, runs_per_problem=2, max_seconds=3,
+               problem_generator=lambda: tsp2planning("att48.tsp", True),
                non_random_planners={"DFS": lambda state, tasks, max_seconds: p.anyhop(state, tasks,
                                                                                       max_seconds=3)},
                random_planners={
