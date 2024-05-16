@@ -28,45 +28,10 @@ Copyright 2013 Dana S. Nau - http://www.cs.umd.edu/~nau
 
 import copy
 import time
+from typing import *
 
 from pyhop_anytime.search_queues import *
 import random
-
-
-class State:
-    def __init__(self, name):
-        self.__name__ = name
-
-    def __repr__(self):
-        return '\n'.join([f"{self.__name__}.{name} = {val}" for (name, val) in vars(self).items() if name != "__name__"])
-
-
-class TaskList:
-    def __init__(self, options=None, completed=False):
-        self.completed = completed
-        if options and len(options) > 0:
-            self.options = options if type(options[0]) == list else [options]
-        else:
-            self.options = [[]] if completed else []
-
-    def __repr__(self):
-        return f"TaskList(options={self.options},completed={self.completed})"
-
-    def add_option(self, option):
-        self.options.append(option)
-
-    def add_options(self, option_seq):
-        for option in option_seq:
-            self.add_option(option)
-
-    def complete(self):
-        return self.completed
-
-    def failed(self):
-        return len(self.options) == 0 and not self.completed
-
-    def in_progress(self):
-        return not self.complete() and not self.failed()
 
 
 class Planner:
@@ -164,16 +129,6 @@ class Planner:
             candidate = successors[random.randint(0, len(successors) - 1)]
         return candidate
 
-    def randhop_steps(self, state, tasks, verbose=0):
-        self.verbose = verbose
-        steps = [PlanStep([], tasks, state, self.copy_func, self.cost_func)]
-        while not (steps[-1] is None or steps[-1].complete()):
-            successors = steps[-1].successors(self)
-            if len(successors) == 0:
-                return None
-            steps.append(successors[random.randint(0, len(successors) - 1)])
-        return steps
-
     def anyhop_random(self, state, tasks, max_seconds, use_max_cost=True, verbose=0):
         start_time = time.time()
         elapsed_time = 0
@@ -194,10 +149,47 @@ class Planner:
         return plan_times
 
     def anyhop_random_tracked(self, state, tasks, max_seconds, ignore_single=True, verbose=0):
-        tracker = ActionTracker(self, tasks, state)
-        plan_times = tracker.plan(max_seconds, ignore_single, verbose)
+        tracker = ActionTracker(tasks, state)
+        start_time = time.time()
+        elapsed_time = 0
+        max_cost = None
+        plan_times = []
+        while elapsed_time < max_seconds:
+            plan = self.make_action_tracked_plan(tracker, verbose, ignore_single)
+            elapsed_time = time.time() - start_time
+            tracker.attempts += 1
+            if plan is None:
+                tracker.failures += 1
+            elif max_cost is None or plan.total_cost < max_cost:
+                plan_times.append((plan.plan, plan.total_cost, elapsed_time))
+                max_cost = plan.total_cost
         print(f"attempts: {tracker.attempts} (failures: {tracker.failures})")
         return plan_times
+
+    def make_action_tracked_plan(self, action_tracker, verbose, ignore_single):
+        self.verbose = verbose
+        candidate = PlanStep([], action_tracker.tasks, action_tracker.state, self.copy_func, self.cost_func)
+        chosen_methods = []
+        while not (candidate is None or candidate.complete()):
+            options = candidate.successors(self)
+            if len(options) == 0:
+                candidate = None
+            elif ignore_single and len(options) == 1:
+                candidate = options[0]
+            else:
+                chosen_index = 0 if len(options) == 1 else action_tracker.random_index_from(options)
+                candidate = options[chosen_index]
+                if len(candidate.tasks) > 0:
+                    chosen_methods.append(tracker_successor_key(candidate))
+
+        for option in chosen_methods:
+            if option not in action_tracker.option_outcomes:
+                action_tracker.option_outcomes[option] = OutcomeCounter()
+            if candidate is None:
+                action_tracker.option_outcomes[option].failure()
+            else:
+                action_tracker.option_outcomes[option].record(candidate.total_cost)
+        return candidate
 
     def n_random(self, state, tasks, n, verbose=0):
         self.verbose = verbose
@@ -208,30 +200,41 @@ class Planner:
                 plans.append(plan)
         return plans
 
-    def make_action_tracked_plan(self, action_tracker, verbose, ignore_single):
-        self.verbose = verbose
-        candidate = PlanStep([], action_tracker.tasks, action_tracker.state, self.copy_func, self.cost_func)
-        chosen_methods = []
-        while not (candidate is None or candidate.complete()):
-            successors = candidate.successors(self)
-            if len(successors) == 0:
-                candidate = None
-            elif ignore_single and len(successors) == 1:
-                candidate = successors[0]
-            else:
-                chosen_index = 0 if len(successors) == 1 else action_tracker.random_index_from(successors)
-                candidate = successors[chosen_index]
-                if len(candidate.tasks) > 0:
-                    chosen_methods.append(tracker_successor_key(candidate))
 
-        for choice in chosen_methods:
-            if choice not in action_tracker.action_outcomes:
-                action_tracker.action_outcomes[choice] = OutcomeCounter()
-            if candidate is None:
-                action_tracker.action_outcomes[choice].failure()
-            else:
-                action_tracker.action_outcomes[choice].record(candidate.total_cost)
-        return candidate
+class State:
+    def __init__(self, name):
+        self.__name__ = name
+
+    def __repr__(self):
+        return '\n'.join([f"{self.__name__}.{name} = {val}" for (name, val) in vars(self).items() if name != "__name__"])
+
+
+class TaskList:
+    def __init__(self, options=None, completed=False):
+        self.completed = completed
+        if options and len(options) > 0:
+            self.options = options if type(options[0]) == list else [options]
+        else:
+            self.options = [[]] if completed else []
+
+    def __repr__(self):
+        return f"TaskList(options={self.options},completed={self.completed})"
+
+    def add_option(self, option):
+        self.options.append(option)
+
+    def add_options(self, option_seq):
+        for option in option_seq:
+            self.add_option(option)
+
+    def complete(self):
+        return self.completed
+
+    def failed(self):
+        return len(self.options) == 0 and not self.completed
+
+    def in_progress(self):
+        return not self.complete() and not self.failed()
 
 
 class PlanStep:
@@ -250,7 +253,7 @@ class PlanStep:
     def complete(self):
         return len(self.tasks) == 0
 
-    def successors(self, planner):
+    def successors(self, planner) -> List:
         options = []
         self.add_operator_options(options, planner)
         self.add_method_options(options, planner)
@@ -340,29 +343,12 @@ def tracker_successor_key(successor):
 
 
 class ActionTracker:
-    def __init__(self, planner, tasks, state):
-        self.planner = planner
+    def __init__(self, tasks, state):
         self.tasks = tasks
         self.state = state
-        self.action_outcomes = {}
+        self.option_outcomes = {}
         self.attempts = 0
         self.failures = 0
-
-    def plan(self, max_seconds, ignore_single, verbose=0):
-        start_time = time.time()
-        elapsed_time = 0
-        max_cost = None
-        plan_times = []
-        while elapsed_time < max_seconds:
-            plan_step = self.planner.make_action_tracked_plan(self, verbose, ignore_single)
-            elapsed_time = time.time() - start_time
-            self.attempts += 1
-            if plan_step is None:
-                self.failures += 1
-            elif max_cost is None or plan_step.total_cost < max_cost:
-                plan_times.append((plan_step.plan, plan_step.total_cost, elapsed_time))
-                max_cost = plan_step.total_cost
-        return plan_times
 
     def random_index_from(self, successors):
         if len(successors) == 1:
@@ -377,20 +363,20 @@ class ActionTracker:
         assert False
 
     def distribution_for(self, successors):
-        outcomes = [self.action_outcomes.get(tracker_successor_key(s)) for s in successors]
-        rankable = {i for i in range(len(outcomes)) if outcomes[i] is not None}
-        if len(rankable) > 1:
-            rankings = [(outcomes[i], i) for i in rankable]
-            rankings.sort(key=lambda k: k[0])
-            rankable_budget = len(rankable) / len(outcomes)
+        outcomes = [self.option_outcomes.get(tracker_successor_key(s)) for s in successors]
+        selected_options = {i for i in range(len(outcomes)) if outcomes[i] is not None}
+        if len(selected_options) > 1:
+            selected_option_ranking = [(outcomes[i], i) for i in selected_options]
+            selected_option_ranking.sort(key=lambda k: k[0])
+            selected_option_budget = len(selected_options) / len(outcomes)
             distribution = {}
-            if len(rankable) < len(outcomes):
-                unrankable_share = (1.0 - rankable_budget) / (len(outcomes) - len(rankable))
+            if len(selected_options) < len(outcomes):
+                unselected_share = (1.0 - selected_option_budget) / (len(outcomes) - len(selected_options))
                 for i in range(len(outcomes)):
-                    if i not in rankable:
-                        distribution[i] = unrankable_share
-            weights = exponential_decay_distribution(len(rankings), rankable_budget)
-            for r_i, (m, i) in enumerate(rankings):
+                    if i not in selected_options:
+                        distribution[i] = unselected_share
+            weights = exponential_decay_distribution(len(selected_option_ranking), selected_option_budget)
+            for r_i, (m, i) in enumerate(selected_option_ranking):
                 distribution[i] = weights[r_i]
             assert len(distribution) == len(successors)
             return distribution

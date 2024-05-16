@@ -60,6 +60,13 @@ class Graph:
                     r = random.randint(0, num_nodes - 1)
                 self.add_edge(n, r)
 
+    def add_all_possible_edges(self):
+        for n1 in self.nodes:
+            for n2 in self.nodes:
+                #if n1 != n2 and not self.has_edge(n1, n2): # This seems better, but...
+                if not self.has_edge(n1, n2):
+                    self.add_edge(n1, n2)
+
     def has_edge(self, n1: Hashable, n2: Hashable) -> bool:
         return n2 in self.edges[n1]
 
