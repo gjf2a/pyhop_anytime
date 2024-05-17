@@ -43,10 +43,10 @@ class Planner:
         self.verbose = verbose
 
     def declare_operators(self, *op_list):
-        self.operators.update({op.__name__:op for op in op_list})
+        self.operators.update({op.__name__: op for op in op_list})
 
     def declare_methods(self, *method_list):
-        self.methods.update({method.__name__:method for method in method_list})
+        self.methods.update({method.__name__: method for method in method_list})
 
     def print_operators(self):
         print(f'OPERATORS: {", ".join(self.operators)}')
@@ -130,41 +130,31 @@ class Planner:
         return candidate
 
     def anyhop_random(self, state, tasks, max_seconds, use_max_cost=True, verbose=0):
-        start_time = time.time()
-        elapsed_time = 0
-        max_cost = None
-        plan_times = []
-        attempts = 0
-        while elapsed_time < max_seconds:
-            if use_max_cost:
-                plan_step = self.randhop(state, tasks, max_cost=max_cost, verbose=verbose)
-            else:
-                plan_step = self.randhop(state, tasks, verbose=verbose)
-            elapsed_time = time.time() - start_time
-            attempts += 1
-            if plan_step is not None and (max_cost is None or plan_step.total_cost < max_cost):
-                plan_times.append((plan_step.plan, plan_step.total_cost, elapsed_time))
-                max_cost = plan_step.total_cost
-        print(f"attempts: {attempts}")
-        return plan_times
+        if use_max_cost:
+            return anyhop_single_shots(lambda max_cost: self.randhop(state, tasks, max_cost=max_cost, verbose=verbose),
+                                       max_seconds)
+        else:
+            return anyhop_single_shots(lambda max_cost: self.randhop(state, tasks, max_cost=None, verbose=verbose),
+                                       max_seconds)
 
     def anyhop_random_tracked(self, state, tasks, max_seconds, ignore_single=True, verbose=0):
         tracker = ActionTracker(tasks, state)
-        start_time = time.time()
-        elapsed_time = 0
-        max_cost = None
-        plan_times = []
-        while elapsed_time < max_seconds:
-            plan = self.make_action_tracked_plan(tracker, verbose, ignore_single)
-            elapsed_time = time.time() - start_time
-            tracker.attempts += 1
-            if plan is None:
-                tracker.failures += 1
-            elif max_cost is None or plan.total_cost < max_cost:
-                plan_times.append((plan.plan, plan.total_cost, elapsed_time))
-                max_cost = plan.total_cost
-        print(f"attempts: {tracker.attempts} (failures: {tracker.failures})")
-        return plan_times
+        return anyhop_single_shots(lambda max_cost: self.make_action_tracked_plan(tracker, verbose, ignore_single),
+                                   max_seconds)
+
+    def anyhop_random_tracked_dfs_seed(self, state, tasks, max_seconds, ignore_single=True, verbose=0):
+        tracker = ActionTracker(tasks, state)
+        seed_ran = False
+
+        def runner(max_cost):
+            nonlocal seed_ran
+            if seed_ran:
+                return self.make_action_tracked_plan(tracker, verbose, ignore_single)
+            else:
+                seed_ran = True
+                return self.dfs_left_tracked_plan(tracker, verbose)
+
+        return anyhop_single_shots(runner, max_seconds)
 
     def make_action_tracked_plan(self, action_tracker, verbose, ignore_single):
         self.verbose = verbose
@@ -191,6 +181,28 @@ class Planner:
                 action_tracker.option_outcomes[option].record(candidate.total_cost)
         return candidate
 
+    def dfs_left_tracked_plan(self, action_tracker, verbose):
+        self.verbose = verbose
+        candidate = PlanStep([], action_tracker.tasks, action_tracker.state, self.copy_func, self.cost_func)
+        chosen_methods = []
+        while not (candidate is None or candidate.complete()):
+            options = candidate.successors(self)
+            if len(options) == 0:
+                candidate = None
+            else:
+                candidate = options[0]
+                if len(candidate.tasks) > 0:
+                    chosen_methods.append(tracker_successor_key(candidate))
+
+        for option in chosen_methods:
+            if option not in action_tracker.option_outcomes:
+                action_tracker.option_outcomes[option] = OutcomeCounter()
+            if candidate is None:
+                action_tracker.option_outcomes[option].failure()
+            else:
+                action_tracker.option_outcomes[option].record(candidate.total_cost)
+        return candidate
+
     def n_random(self, state, tasks, n, verbose=0):
         self.verbose = verbose
         plans = []
@@ -201,12 +213,27 @@ class Planner:
         return plans
 
 
+def anyhop_single_shots(single_shot_planner, max_seconds):
+    start_time = time.time()
+    elapsed_time = 0
+    max_cost = None
+    plan_times = []
+    while elapsed_time < max_seconds:
+        plan_step = single_shot_planner(max_cost)
+        elapsed_time = time.time() - start_time
+        if plan_step is not None and (max_cost is None or plan_step.total_cost < max_cost):
+            plan_times.append((plan_step.plan, plan_step.total_cost, elapsed_time))
+            max_cost = plan_step.total_cost
+    return plan_times
+
+
 class State:
     def __init__(self, name):
         self.__name__ = name
 
     def __repr__(self):
-        return '\n'.join([f"{self.__name__}.{name} = {val}" for (name, val) in vars(self).items() if name != "__name__"])
+        return '\n'.join(
+            [f"{self.__name__}.{name} = {val}" for (name, val) in vars(self).items() if name != "__name__"])
 
 
 class TaskList:
@@ -284,7 +311,9 @@ class PlanStep:
             if subtask_options is not None:
                 for subtasks in subtask_options.options:
                     planner.log(3, f"depth {self.depth()} new tasks: {subtasks}")
-                    options.append(PlanStep(self.plan, subtasks + self.tasks[1:], self.state, self.copy_func, self.cost_func, past_cost=self.total_cost))
+                    options.append(
+                        PlanStep(self.plan, subtasks + self.tasks[1:], self.state, self.copy_func, self.cost_func,
+                                 past_cost=self.total_cost))
 
     def next_task(self):
         result = self.tasks[0]
@@ -386,24 +415,23 @@ class ActionTracker:
 
 
 def exponential_decay_distribution(num_samples, budget):
-    weights = [2**(num_samples - i - 1) for i in range(num_samples)]
+    weights = [2 ** (num_samples - i - 1) for i in range(num_samples)]
     total_weight = sum(weights)
     return [w * budget / total_weight for w in weights]
-
 
 
 ############################################################
 # Helper functions that may be useful in domain models
 
 
-def forall(seq,cond):
+def forall(seq, cond):
     """True if cond(x) holds for all x in seq, otherwise False."""
     for x in seq:
         if not cond(x): return False
     return True
 
 
-def find_if(cond,seq):
+def find_if(cond, seq):
     """
     Return the first x in seq such that cond(x) holds, if there is one.
     Otherwise return None.

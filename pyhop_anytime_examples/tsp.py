@@ -131,6 +131,25 @@ if __name__ == '__main__':
                })
     print()
     print()
+    print("berlin52.tsp experiment")
+    experiment(num_problems=1, runs_per_problem=2, max_seconds=3,
+               problem_generator=lambda: tsp2planning("berlin52.tsp", False),
+               non_random_planners={"DFS": lambda state, tasks, max_seconds: p.anyhop(state, tasks,
+                                                                                      max_seconds=3)},
+               random_planners={
+                   "Random": lambda state, tasks, max_seconds: p.anyhop_random(state, tasks, use_max_cost=False,
+                                                                               max_seconds=3),
+                   "Tracker1": lambda state, tasks, max_seconds: p.anyhop_random_tracked(state, tasks,
+                                                                                         ignore_single=True,
+                                                                                         max_seconds=3),
+                   "Tracker2": lambda state, tasks, max_seconds: p.anyhop_random_tracked(state, tasks,
+                                                                                         ignore_single=False,
+                                                                                         max_seconds=3),
+                   "Tracker3": lambda state, tasks, max_seconds: p.anyhop_random_tracked_dfs_seed(state, tasks,
+                                                                                         max_seconds=3)
+               })
+    print()
+    print()
     tsp_experiment(25, 5)
     print()
     print()
