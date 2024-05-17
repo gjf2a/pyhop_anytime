@@ -62,19 +62,22 @@ def make_state_report_mst(num_cities):
 
 def tsp2graph(filename: str, shuffle_city_order: bool) -> Graph:
     with open(filename) as fin:
-        result = Graph()
-        lines = fin.readlines()
-        if shuffle_city_order:
-            random.shuffle(lines)
         started = False
-        for line in lines:
+        node_lines = []
+        for line in fin:
             if line.strip() == "EOF":
                 started = False
             if started:
-                name, x, y = line.split()
-                result.add_node(int(name), (float(x), float(y)))
+                node_lines.append(line)
             if line.strip() == "NODE_COORD_SECTION":
                 started = True
+
+        result = Graph()
+        if shuffle_city_order:
+            random.shuffle(node_lines)
+        for line in node_lines:
+            name, x, y = line.split()
+            result.add_node(int(name), (float(x), float(y)))
         result.add_all_possible_edges()
         return result
 
