@@ -60,11 +60,14 @@ def make_state_report_mst(num_cities):
     return state, tasks
 
 
-def tsp2graph(filename: str) -> Graph:
+def tsp2graph(filename: str, shuffle_city_order: bool) -> Graph:
     with open(filename) as fin:
         result = Graph()
+        lines = fin.readlines()
+        if shuffle_city_order:
+            random.shuffle(lines)
         started = False
-        for line in fin:
+        for line in lines:
             if line.strip() == "EOF":
                 started = False
             if started:
@@ -76,10 +79,10 @@ def tsp2graph(filename: str) -> Graph:
         return result
 
 
-def tsp2planning(filename: str, random_start_city=False):
+def tsp2planning(filename: str, shuffle_city_order=False):
     state = State(f"{filename}")
-    state.graph = tsp2graph(filename)
-    city = random.randint(0, state.graph.num_nodes() - 1) if random_start_city else 0
+    state.graph = tsp2graph(filename, shuffle_city_order)
+    city = random.randint(0, state.graph.num_nodes() - 1) if shuffle_city_order else 0
     state.at = state.graph.all_nodes()[city]
     return tsp_kickoff(state)
 
