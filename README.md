@@ -12,12 +12,20 @@ planner created by [Dana Nau](http://www.cs.umd.edu/~nau/). Here are the main mo
   * Exactly one task list option.
   * Multiple task list options, one of which is to be selected nondeterministically
     by the planner.
-* The introduction of nondeterministic task options enables the use of an
+* The introduction of nondeterministic task options enables the use of
   [anytime](https://en.wikipedia.org/wiki/Anytime_algorithm) planning 
-  algorithm. The user can specify a maximum time limit, and once that time
-  expires it will return the best plan it found. 
-  * The anytime planning implementation is inspired by the
-    algorithm described for the [SHOP3](https://github.com/shop-planner/shop3) planner.
+  algorithms, as described in my 
+  [ICAPS HPlan 2024 paper](https://icaps24.icaps-conference.org/program/workshops/hplan/HPlan2024_paper_5.pdf). 
+  The user can specify a maximum time limit, and once that time expires it will return the best plan it found. 
+  * The **anyhop()** method is an implementation of the algorithm described for the 
+    [SHOP3](https://github.com/shop-planner/shop3) planner.
+  * The **anyhop_random()** method generates random plans, returning the best found within time available.
+  * The **anyhop_random_tracked()** method tracks the quality of plans associated with every generated action. It 
+    then generates random plans where actions associated with high-quality plans have a higher probability of selection.
+  * Kaggle notebooks containing experiments from the paper:
+    * [Experiments up to 30 seconds](https://www.kaggle.com/code/gabrielferrer/bar-plots- for-icaps-hplan-2024-paper)
+    * [Experiments of 200 seconds](https://www.kaggle.com/code/gabrielferrer/ extended-experiments-for-icaps-hplan-2024-paper)
+    * [Satellite Domain Experiments](https://www.kaggle.com/code/gabrielferrer/anyhop- satellite-experiments)
 * Methods are declared in the same way as operators, by simply listing the Python functions corresponding to the  
   methods. Alternative task lists for a given method are then specified by using nondeterministic task options.
 * States and goals are consolidated into a single data type. Printing states
