@@ -14,8 +14,9 @@ planner created by [Dana Nau](http://www.cs.umd.edu/~nau/). Here are the main mo
     by the planner.
 * The introduction of nondeterministic task options enables the use of
   [anytime](https://en.wikipedia.org/wiki/Anytime_algorithm) planning 
-  algorithms, as described in my 
-  [ICAPS HPlan 2024 paper](https://icaps24.icaps-conference.org/program/workshops/hplan/HPlan2024_paper_5.pdf). 
+  algorithms, as described in 
+  [my paper](https://icaps24.icaps-conference.org/program/workshops/hplan/HPlan2024_paper_5.pdf) for the  
+  [ICAPS HPlan Workshop 2024](https://icaps24.icaps-conference.org/program/workshops/hplan/). 
   The user can specify a maximum time limit, and once that time expires it will return the best plan it found. 
   * The **anyhop()** method is an implementation of the algorithm described for the 
     [SHOP3](https://github.com/shop-planner/shop3) planner.
