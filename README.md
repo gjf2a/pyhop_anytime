@@ -17,10 +17,10 @@ planner created by [Dana Nau](http://www.cs.umd.edu/~nau/). Here are the main mo
   algorithms, as described in 
   [my paper](https://icaps24.icaps-conference.org/program/workshops/hplan/HPlan2024_paper_5.pdf) for the [2024 ICAPS HPlan Workshop](https://icaps24.icaps-conference.org/program/workshops/hplan/). 
   The user can specify a maximum time limit, and once that time expires it will return the best plan it found. 
-  * The **anyhop()** method is an implementation of the algorithm described for the 
+  * `Planner.anyhop()` is an implementation of the algorithm described for the 
     [SHOP3](https://github.com/shop-planner/shop3) planner.
-  * The **anyhop_random()** method generates random plans, returning the best found within time available.
-  * The **anyhop_random_tracked()** method tracks the quality of plans associated with every generated action. It 
+  * `Planner.anyhop_random()` generates random plans, returning the best found within time available.
+  * `Planner.anyhop_random_tracked()` tracks the quality of plans associated with every generated action. It 
     then generates random plans where actions associated with high-quality plans have a higher probability of selection.
   * Experiments from the paper:
     * [Experiments up to 30 seconds](https://www.kaggle.com/code/gabrielferrer/bar-plots-for-icaps-hplan-2024-paper)
@@ -30,9 +30,8 @@ planner created by [Dana Nau](http://www.cs.umd.edu/~nau/). Here are the main mo
   methods. Alternative task lists for a given method are then specified by using nondeterministic task options.
 * States and goals are consolidated into a single data type. Printing states
   is simplified by the implementation of a `__repr__()` method.  
-* Depth-first search is implemented using a Python list as a stack rather 
-  than by recursion. This is intended for avoiding stack overflows when 
-  finding long plans.
+* Depth-first search is implemented using a Python list as a stack rather than by recursion. This eliminates stack 
+  overflows when finding long plans.
 
 ## HTN Planning
 
