@@ -22,10 +22,10 @@ planner created by [Dana Nau](http://www.cs.umd.edu/~nau/). Here are the main mo
   * The **anyhop_random()** method generates random plans, returning the best found within time available.
   * The **anyhop_random_tracked()** method tracks the quality of plans associated with every generated action. It 
     then generates random plans where actions associated with high-quality plans have a higher probability of selection.
-  * Kaggle notebooks containing experiments from the paper:
-    * [Experiments up to 30 seconds](https://www.kaggle.com/code/gabrielferrer/bar-plots- for-icaps-hplan-2024-paper)
-    * [Experiments of 200 seconds](https://www.kaggle.com/code/gabrielferrer/ extended-experiments-for-icaps-hplan-2024-paper)
-    * [Satellite Domain Experiments](https://www.kaggle.com/code/gabrielferrer/anyhop- satellite-experiments)
+  * Experiments from the paper:
+    * [Experiments up to 30 seconds](https://www.kaggle.com/code/gabrielferrer/bar-plots-for-icaps-hplan-2024-paper)
+    * [Experiments of 200 seconds](https://www.kaggle.com/code/gabrielferrer/extended-experiments-for-icaps-hplan-2024-paper)
+    * [Satellite Domain Experiments](https://www.kaggle.com/code/gabrielferrer/anyhop-satellite-experiments)
 * Methods are declared in the same way as operators, by simply listing the Python functions corresponding to the  
   methods. Alternative task lists for a given method are then specified by using nondeterministic task options.
 * States and goals are consolidated into a single data type. Printing states
