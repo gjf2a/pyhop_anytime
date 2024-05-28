@@ -63,8 +63,8 @@ class Graph:
     def add_all_possible_edges(self):
         for n1 in self.nodes:
             for n2 in self.nodes:
-                #if n1 != n2 and not self.has_edge(n1, n2): # This seems better, but...
-                if not self.has_edge(n1, n2):
+                if n1 != n2 and not self.has_edge(n1, n2): # This seems better, but...
+                #if not self.has_edge(n1, n2):
                     self.add_edge(n1, n2)
 
     def has_edge(self, n1: Hashable, n2: Hashable) -> bool:
