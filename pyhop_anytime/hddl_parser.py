@@ -10,8 +10,16 @@ def append_text(text: str, seq: List[str]):
 def tokenize(s: str) -> List[str]:
     result = []
     current = ''
+    in_comment = False
     for c in s:
-        if c == '(':
+        if in_comment:
+            if c == '\n':
+                in_comment = False
+        elif c == ';':
+            in_comment = True
+            append_text(current, result)
+            current = ''
+        elif c == '(':
             append_text(current, result)
             current = ''
             result.append('[')
