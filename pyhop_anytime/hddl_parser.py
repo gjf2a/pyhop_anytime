@@ -134,12 +134,25 @@ def make_task(task_list) -> Task:
 
 
 class UntypedSymbol:
-    def __init__(self, name: str, param_names: List[str]):
+    def __init__(self, name: str, positive: bool, param_names: List[str]):
         self.name = name
+        self.positive = positive
         self.param_names = param_names
 
     def __repr__(self):
-        return f"UntypedSymbol('{self.name}', {self.param_names})"
+        return f"UntypedSymbol('{self.name}', {self.positive}, {self.param_names})"
+
+
+def make_untyped_symbol(symlist: List) -> UntypedSymbol:
+    name = symlist[0]
+    args = symlist[1:]
+    positive = True
+    if name == 'not':
+        symlist = symlist[1]
+        name = symlist[0]
+        args = symlist[1:]
+        positive = False
+    return UntypedSymbol(name, positive, args)
 
 
 class Conjunction:
@@ -162,7 +175,7 @@ class Universal:
 def make_precond(prelist: List) -> Union[Conjunction, Universal, UntypedSymbol]:
     if prelist[0] == 'forall':
         param = make_params(prelist[1])[0]
-        pred = UntypedSymbol(prelist[2][0], prelist[2][1:])
+        pred = make_untyped_symbol(prelist[2])
         return Universal(param, pred)
     else:
         return make_conjunction(prelist)
@@ -172,12 +185,10 @@ def make_conjunction(conjunct_list: List) -> Union[Conjunction, UntypedSymbol]:
     if conjunct_list[0] == 'and':
         conjuncts = []
         for conjunct in conjunct_list[1:]:
-            name = conjunct[0]
-            params = conjunct[1:]
-            conjuncts.append(UntypedSymbol(name, params))
+            conjuncts.append(make_untyped_symbol(conjunct))
         return Conjunction(conjuncts)
     else:
-        return UntypedSymbol(conjunct_list[0], conjunct_list[1:])
+        return make_untyped_symbol(conjunct_list)
 
 
 class Method:
@@ -206,11 +217,9 @@ def make_method(method_list: List) -> Method:
             assert method_list[i + 1][0] == 'and'
             ordered_tasks = []
             for task_list in method_list[8][1:]:
-                name = task_list[0]
-                params = task_list[1:]
-                ordered_tasks.append(UntypedSymbol(name, params))
+                ordered_tasks.append(make_untyped_symbol(task_list))
         elif method_list[i] == ":ordered-subtasks":
-            ordered_tasks = [UntypedSymbol(method_list[i + 1][0], method_list[i + 1][1:])]
+            ordered_tasks = [make_untyped_symbol(method_list[i + 1])]
         else:
             print(f"Unknown tag: {method_list[i]}")
             assert False
