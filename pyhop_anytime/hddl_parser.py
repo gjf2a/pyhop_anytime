@@ -1,3 +1,4 @@
+import os
 from typing import List, Union
 
 
@@ -172,8 +173,10 @@ class Universal:
         return f"Universal({self.param}, {self.pred})"
 
 
-def make_precond(prelist: List) -> Union[Conjunction, Universal, UntypedSymbol]:
-    if prelist[0] == 'forall':
+def make_precond(prelist: List) -> Union[None, Conjunction, Universal, UntypedSymbol]:
+    if len(prelist) == 0:
+        return None
+    elif prelist[0] == 'forall':
         param = make_params(prelist[1])[0]
         pred = make_untyped_symbol(prelist[2])
         return Universal(param, pred)
@@ -181,8 +184,10 @@ def make_precond(prelist: List) -> Union[Conjunction, Universal, UntypedSymbol]:
         return make_conjunction(prelist)
 
 
-def make_conjunction(conjunct_list: List) -> Union[Conjunction, UntypedSymbol]:
-    if conjunct_list[0] == 'and':
+def make_conjunction(conjunct_list: List) -> Union[None, Conjunction, UntypedSymbol]:
+    if len(conjunct_list) == 0:
+        return None
+    elif conjunct_list[0] == 'and':
         conjuncts = []
         for conjunct in conjunct_list[1:]:
             conjuncts.append(make_untyped_symbol(conjunct))
@@ -216,7 +221,7 @@ def make_method(method_list: List) -> Method:
         elif method_list[i] == ':ordered-tasks':
             assert method_list[i + 1][0] == 'and'
             ordered_tasks = []
-            for task_list in method_list[8][1:]:
+            for task_list in method_list[i + 1][1:]:
                 ordered_tasks.append(make_untyped_symbol(task_list))
         elif method_list[i] == ":ordered-subtasks":
             ordered_tasks = [make_untyped_symbol(method_list[i + 1])]
@@ -270,7 +275,17 @@ def parse_hddl(domain_str: str):
 
 
 if __name__ == '__main__':
-    test_str = open("c:/users/ferrer/pycharmprojects/ipc2020-domains/total-order/Blocksworld-HPDDL/domain.hddl").read()
+    prefix = 'c:/users/ferrer/pycharmprojects/ipc2020-domains/total-order'
+    for domain in os.listdir(prefix):
+        print(f"Testing {domain}...")
+        try:
+            test_str = open(f"{prefix}/{domain}/domain.hddl").read()
+            test_domain = parse_hddl(test_str)
+            print("parsed without errors")
+        except Exception as e:
+            print(f"Exception: {e}")
+
+    test_str = open("c:/users/ferrer/pycharmprojects/ipc2020-domains/total-order/Robot/domain.hddl").read()
     tokens = tokenize(test_str)
     py_list_form = eval(coalesce(tokens))
     print(py_list_form)
