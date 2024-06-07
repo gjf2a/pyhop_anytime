@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 
 
 def append_text(text: str, seq: List[str]):
@@ -58,7 +58,7 @@ class Domain:
             elif tag == ':method':
                 self.methods.append(make_method(item[1:]))
             elif tag == ':action':
-                self.actions.append(item[1:])
+                self.actions.append(make_action(item[1:]))
 
     def types_for(self, name: str) -> List[str]:
         if name in self.predicates:
@@ -159,6 +159,27 @@ class Universal:
         return f"Universal({self.param}, {self.pred})"
 
 
+def make_precond(prelist: List) -> Union[Conjunction, Universal, UntypedSymbol]:
+    if prelist[0] == 'forall':
+        param = make_params(prelist[1])[0]
+        pred = UntypedSymbol(prelist[2][0], prelist[2][1:])
+        return Universal(param, pred)
+    else:
+        return make_conjunction(prelist)
+
+
+def make_conjunction(conjunct_list: List) -> Union[Conjunction, UntypedSymbol]:
+    if conjunct_list[0] == 'and':
+        conjuncts = []
+        for conjunct in conjunct_list[1:]:
+            name = conjunct[0]
+            params = conjunct[1:]
+            conjuncts.append(UntypedSymbol(name, params))
+        return Conjunction(conjuncts)
+    else:
+        return UntypedSymbol(conjunct_list[0], conjunct_list[1:])
+
+
 class Method:
     def __init__(self, name: str, params: List[Parameter], task_name: str, preconditions: Conjunction, ordered_tasks: List[UntypedSymbol]):
         self.name = name
@@ -180,19 +201,7 @@ def make_method(method_list: List) -> Method:
         elif method_list[i] == ':task':
             task_name = method_list[i + 1][0]
         elif method_list[i] == ':precondition':
-            if method_list[i + 1][0] == 'and':
-                preconds = []
-                for precond_list in method_list[i + 1][1:]:
-                    name = precond_list[0]
-                    params = precond_list[1:]
-                    preconds.append(UntypedSymbol(name, params))
-                preconditions = Conjunction(preconds)
-            elif method_list[i + 1][0] == 'forall':
-                param = make_params(method_list[i + 1][1])[0]
-                pred = UntypedSymbol(method_list[i + 1][2][0], method_list[i + 1][2][1:])
-                preconditions = Universal(param, pred)
-            else:
-                assert False
+            preconditions = make_precond(method_list[i + 1])
         elif method_list[i] == ':ordered-tasks':
             assert method_list[i + 1][0] == 'and'
             ordered_tasks = []
@@ -206,6 +215,32 @@ def make_method(method_list: List) -> Method:
             print(f"Unknown tag: {method_list[i]}")
             assert False
     return Method(name, params, task_name, preconditions, ordered_tasks)
+
+
+class Action:
+    def __init__(self, name, parameters, precondition, effects):
+        self.name = name
+        self.parameters = parameters
+        self.precondition = precondition
+        self.effects = effects
+
+    def __repr__(self):
+        return f"Action('{self.name}', {self.parameters}, {self.precondition}, {self.effects})"
+
+
+def make_action(action_list: List) -> Action:
+    name = action_list[0]
+    parameters = precondition = effects = None
+    for i in range(1, len(action_list), 2):
+        if action_list[i] == ':parameters':
+            parameters = make_params(action_list[i + 1])
+        elif action_list[i] == ':precondition':
+            precondition = make_precond(action_list[i + 1])
+        elif action_list[i] == ':effect':
+            effects = make_conjunction(action_list[i + 1])
+        else:
+            assert False
+    return Action(name, parameters, precondition, effects)
 
 
 def parse_problem(name: str, prob_list: List):
