@@ -1,5 +1,5 @@
 import os
-from typing import List, Union
+from typing import List, Union, Dict, Set
 
 
 def append_text(text: str, seq: List[str]):
@@ -48,37 +48,6 @@ def coalesce(tokens: List[str]) -> str:
     return result
 
 
-class Domain:
-    def __init__(self, name: str, domain_list: List):
-        self.name = name
-        self.tasks = {}
-        self.methods = []
-        self.actions = []
-        for item in domain_list:
-            tag = item[0]
-            if tag == ':types':
-                self.types = set(item[1:])
-            elif tag == ':predicates':
-                predicates = [make_pred(p) for p in item[1:]]
-                self.predicates = {p.name: p for p in predicates}
-            elif tag == ':task':
-                task = make_task(item[1:])
-                self.tasks[task.name] = task
-            elif tag == ':method':
-                self.methods.append(make_method(item[1:]))
-            elif tag == ':action':
-                self.actions.append(make_action(item[1:]))
-
-    def types_for(self, name: str) -> List[str]:
-        if name in self.predicates:
-            return self.predicates[name].type_list()
-        elif name in self.tasks:
-            return self.tasks[name].type_list()
-        else:
-            print(f"{name} not found")
-            assert False
-
-
 class Parameter:
     def __init__(self, name, ptype):
         self.name = name
@@ -109,9 +78,7 @@ def make_params(param_list: List[str]) -> List[Parameter]:
     pending_names = []
     pending_type = False
     for p in param_list:
-        if p[0] == '?':
-            pending_names.append(p)
-        elif p == '-':
+        if p == '-':
             pending_type = True
         elif pending_type:
             for name in pending_names:
@@ -119,7 +86,7 @@ def make_params(param_list: List[str]) -> List[Parameter]:
             pending_names = []
             pending_type = False
         else:
-            assert False
+            pending_names.append(p)
     return result
 
 
@@ -265,8 +232,91 @@ def make_action(action_list: List) -> Action:
     return Action(name, parameters, precondition, effects)
 
 
-def parse_problem(name: str, prob_list: List):
-    assert False
+class Domain:
+    def __init__(self, name: str, types: Set[str], predicates: Dict[str, Predicate], tasks: Dict[str, Task], methods: Dict[str, Method], actions: Dict[str, Action]):
+        self.name = name
+        self.types = types
+        self.predicates = predicates
+        self.tasks = tasks
+        self.methods = methods
+        self.actions = actions
+
+    def __repr__(self):
+        return f"Domain('{self.name}', {self.types}, {self.predicates}, {self.tasks}, {self.methods}, {self.actions})"
+
+    def types_for(self, name: str) -> List[str]:
+        if name in self.predicates:
+            return self.predicates[name].type_list()
+        elif name in self.tasks:
+            return self.tasks[name].type_list()
+        else:
+            print(f"{name} not found")
+            assert False
+
+
+def parse_domain(name: str, domain_list: List) -> Domain:
+    tasks = {}
+    methods = {}
+    actions = {}
+    types = set()
+    predicates = {}
+    for item in domain_list:
+        tag = item[0]
+        if tag == ':types':
+            types = set(item[1:])
+        elif tag == ':predicates':
+            predicates = [make_pred(p) for p in item[1:]]
+            predicates = {p.name: p for p in predicates}
+        elif tag == ':task':
+            task = make_task(item[1:])
+            tasks[task.name] = task
+        elif tag == ':method':
+            method = make_method(item[1:])
+            methods[method.name] = method
+        elif tag == ':action':
+            action = make_action(item[1:])
+            actions[action.name] = action
+    return Domain(name, types, predicates, tasks, methods, actions)
+
+
+class Problem:
+    def __init__(self, name: str, domain: str, objects: List[Parameter], tasks: List[UntypedSymbol], init: List[UntypedSymbol], goal: Conjunction):
+        self.name = name
+        self.domain = domain
+        self.objects = objects
+        self.tasks = tasks
+        self.init = init
+        self.goal = goal
+
+    def __repr__(self):
+        return f"Problem('{self.name}', '{self.domain}', {self.objects}, {self.tasks}, {self.init}, {self.goal})"
+
+
+def parse_problem(name: str, prob_list: List) -> Problem:
+    assert prob_list[0][0] == ':domain'
+    domain = prob_list[0][1]
+    objects = []
+    tasks = []
+    init = []
+    goal = None
+
+    for thing in prob_list[1:]:
+        tag = thing[0]
+        if tag == ':objects':
+            objects = make_params(thing[1:])
+        elif tag == ':htn':
+            for i in range(1, len(thing), 2):
+                if thing[i] in {':subtasks', ':ordered-subtasks', ':ordered-tasks'}:
+                    for task in thing[i + 1][1:]:
+                        tasks.append(make_untyped_symbol(task[1]))
+        elif tag == ':init':
+            init = [make_untyped_symbol(s) for s in thing[1:]]
+        elif tag == ':goal':
+            goal = make_conjunction(thing[1:])
+        else:
+            print(f"Don't recognize tag {tag}")
+            assert False
+    return Problem(name, domain, objects, tasks, init, goal)
 
 
 def parse_hddl(domain_str: str):
@@ -275,7 +325,7 @@ def parse_hddl(domain_str: str):
     category = py_list_form[1][0]
     name = py_list_form[1][1]
     if category == 'domain':
-        return Domain(name, py_list_form[2:])
+        return parse_domain(name, py_list_form[2:])
     elif category == 'problem':
         return parse_problem(name, py_list_form[2:])
     else:
@@ -283,25 +333,14 @@ def parse_hddl(domain_str: str):
 
 
 if __name__ == '__main__':
-    prefix = 'c:/users/ferrer/pycharmprojects/ipc2020-domains/total-order'
-    for domain in os.listdir(prefix):
-        print(f"Testing {domain}...")
-        try:
-            test_str = open(f"{prefix}/{domain}/domain.hddl").read()
-            test_domain = parse_hddl(test_str)
-            print("parsed without errors")
-        except Exception as e:
-            print(f"Exception: {e}")
-
     test_str = open("c:/users/ferrer/pycharmprojects/ipc2020-domains/total-order/Robot/domain.hddl").read()
     tokens = tokenize(test_str)
     py_list_form = eval(coalesce(tokens))
     print(py_list_form)
 
     test_domain = parse_hddl(test_str)
-    print(test_domain.name)
-    print(test_domain.types)
-    print(test_domain.predicates)
-    print(test_domain.tasks)
-    print(test_domain.methods)
-    print(test_domain.actions)
+    print(test_domain)
+
+    test_str = open("c:/users/ferrer/pycharmprojects/ipc2020-domains/total-order/Blocksworld-HPDDL/pfile_005.hddl").read()
+    test_problem = parse_hddl(test_str)
+    print(test_problem)
