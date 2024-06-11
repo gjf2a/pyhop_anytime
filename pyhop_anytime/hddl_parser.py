@@ -333,7 +333,7 @@ def parse_hddl(domain_str: str):
 
 
 if __name__ == '__main__':
-    test_str = open("c:/users/ferrer/pycharmprojects/ipc2020-domains/total-order/Robot/domain.hddl").read()
+    test_str = open("../../ipc2020-domains/total-order/Robot/domain.hddl").read()
     tokens = tokenize(test_str)
     py_list_form = eval(coalesce(tokens))
     print(py_list_form)
@@ -341,6 +341,6 @@ if __name__ == '__main__':
     test_domain = parse_hddl(test_str)
     print(test_domain)
 
-    test_str = open("c:/users/ferrer/pycharmprojects/ipc2020-domains/total-order/Blocksworld-HPDDL/pfile_005.hddl").read()
+    test_str = open("../../ipc2020-domains/total-order/Blocksworld-HPDDL/pfile_005.hddl").read()
     test_problem = parse_hddl(test_str)
     print(test_problem)
