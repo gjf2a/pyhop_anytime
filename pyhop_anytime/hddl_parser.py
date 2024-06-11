@@ -253,6 +253,9 @@ class Domain:
             print(f"{name} not found")
             assert False
 
+    def write_domain_file(self, filename: str):
+        pass
+
 
 def parse_domain(name: str, domain_list: List) -> Domain:
     tasks = {}
@@ -291,6 +294,9 @@ class Problem:
     def __repr__(self):
         return f"Problem('{self.name}', '{self.domain}', {self.objects}, {self.tasks}, {self.init}, {self.goal})"
 
+    def init_state(self) -> Set[str]:
+        return {str(sym) for sym in self.init}
+        
 
 def parse_problem(name: str, prob_list: List) -> Problem:
     assert prob_list[0][0] == ':domain'

@@ -66,7 +66,7 @@ class Graph:
                 if n1 != n2 and not self.has_edge(n1, n2):
                     self.add_edge(n1, n2)
 
-    def has_node(self, name: Hashable) -> bool:
+    def __contains__(self, name: Hashable) -> bool:
         return name in self.nodes
 
     def node_value(self, name: Hashable) -> Tuple[float,float]:
