@@ -1,5 +1,5 @@
-import os
-from typing import List, Union, Dict, Set
+import copy
+from typing import List, Union, Dict, Set, Callable
 
 
 def append_text(text: str, seq: List[str]):
@@ -49,7 +49,7 @@ def coalesce(tokens: List[str]) -> str:
 
 
 class Parameter:
-    def __init__(self, name, ptype):
+    def __init__(self, name: str, ptype: str):
         self.name = name
         self.ptype = ptype
 
@@ -118,6 +118,12 @@ class UntypedSymbol:
     def __repr__(self):
         return f"UntypedSymbol('{self.name}', {self.positive}, {self.param_names})"
 
+    def rebind(self, bindings: Dict[str,str]) -> 'UntypedSymbol':
+        return UntypedSymbol(self.name, self.positive, [bindings.get(param, param) for param in self.param_names])
+
+    def precondition(self, bindings: Dict[str,str]) -> Callable[['State'], bool]:
+        return lambda state: self.rebind(bindings) in state
+
 
 def make_untyped_symbol(symlist: List) -> UntypedSymbol:
     name = symlist[0]
@@ -131,12 +137,43 @@ def make_untyped_symbol(symlist: List) -> UntypedSymbol:
     return UntypedSymbol(name, positive, args)
 
 
+class State:
+    def __init__(self, objects: List[Parameter], predicates: List[UntypedSymbol]):
+        self.predicates = {copy.deepcopy(pred) for pred in predicates}
+        self.objects = {obj.name for obj in objects}
+        self.types2objects = {}
+        for obj in objects:
+            if obj.ptype not in self.types2objects:
+                self.types2objects[obj.ptype] = set()
+            self.types2objects[obj.ptype].add(obj.name)
+
+    def __contains__(self, item: Union[str, UntypedSymbol]) -> bool:
+        if type(item) == UntypedSymbol:
+            return (item in self.predicates) == item.positive
+        elif type(item) == str:
+            return item in self.objects
+        else:
+            raise TypeError("States only contain objects (str) and predicates (UntypedSymbol)")
+
+    def all_objects_of(self, type_name: str) -> List[str]:
+        return [obj for obj in self.types2objects[type_name]]
+
+
 class Conjunction:
     def __init__(self, predicates: List[UntypedSymbol]):
         self.predicates = predicates
 
     def __repr__(self):
         return f"Conjunction({self.predicates})"
+
+    def precondition(self, bindings: Dict[str, str]) -> Callable[[State], bool]:
+        return lambda state: all(p.precondition(bindings)(state) for p in self.predicates)
+
+
+def binding_plus(bindings: Dict[str, str], param: str, value: str) -> Dict[str, str]:
+    result = copy.deepcopy(bindings)
+    result[param] = value
+    return result
 
 
 class Universal:
@@ -146,6 +183,10 @@ class Universal:
 
     def __repr__(self):
         return f"Universal({self.param}, {self.pred})"
+
+    def precondition(self, bindings: Dict[str, str]) -> Callable[[State], bool]:
+        return lambda state: all(self.pred.precondition(binding_plus(bindings, self.param.name, name))(state)
+                                 for name in state.all_objects_of(self.param.ptype))
 
 
 def make_precond(prelist: List) -> Union[None, Conjunction, Universal, UntypedSymbol]:
@@ -172,7 +213,8 @@ def make_conjunction(conjunct_list: List) -> Union[None, Conjunction, UntypedSym
 
 
 class Method:
-    def __init__(self, name: str, params: List[Parameter], task_name: str, preconditions: Conjunction, ordered_tasks: List[UntypedSymbol]):
+    def __init__(self, name: str, params: List[Parameter], task_name: str, preconditions: Conjunction,
+                 ordered_tasks: List[UntypedSymbol]):
         self.name = name
         self.params = params
         self.task_name = task_name
@@ -207,7 +249,9 @@ def make_method(method_list: List) -> Method:
 
 
 class Action:
-    def __init__(self, name, parameters, precondition, effects):
+    def __init__(self, name: str, parameters: List[Parameter],
+                 precondition: Union[None, Conjunction, Universal, UntypedSymbol],
+                 effects: Union[None, Conjunction, UntypedSymbol]):
         self.name = name
         self.parameters = parameters
         self.precondition = precondition
@@ -215,6 +259,11 @@ class Action:
 
     def __repr__(self):
         return f"Action('{self.name}', {self.parameters}, {self.precondition}, {self.effects})"
+
+    def action_func(self, bindings: Dict[str,str]) -> Callable[[State], Union[None, State]]:
+        pass
+    # TODO: Create an effect() method for each of Conjunction and UntypedSymbol
+    #       Then create a final function for the precondition and effects.
 
 
 def make_action(action_list: List) -> Action:
@@ -233,7 +282,8 @@ def make_action(action_list: List) -> Action:
 
 
 class Domain:
-    def __init__(self, name: str, types: Set[str], predicates: Dict[str, Predicate], tasks: Dict[str, Task], methods: Dict[str, Method], actions: Dict[str, Action]):
+    def __init__(self, name: str, types: Set[str], predicates: Dict[str, Predicate], tasks: Dict[str, Task],
+                 methods: Dict[str, Method], actions: Dict[str, Action]):
         self.name = name
         self.types = types
         self.predicates = predicates
@@ -252,9 +302,6 @@ class Domain:
         else:
             print(f"{name} not found")
             assert False
-
-    def write_domain_file(self, filename: str):
-        pass
 
 
 def parse_domain(name: str, domain_list: List) -> Domain:
@@ -283,7 +330,8 @@ def parse_domain(name: str, domain_list: List) -> Domain:
 
 
 class Problem:
-    def __init__(self, name: str, domain: str, objects: List[Parameter], tasks: List[UntypedSymbol], init: List[UntypedSymbol], goal: Conjunction):
+    def __init__(self, name: str, domain: str, objects: List[Parameter], tasks: List[UntypedSymbol],
+                 init: List[UntypedSymbol], goal: Conjunction):
         self.name = name
         self.domain = domain
         self.objects = objects
@@ -294,8 +342,8 @@ class Problem:
     def __repr__(self):
         return f"Problem('{self.name}', '{self.domain}', {self.objects}, {self.tasks}, {self.init}, {self.goal})"
 
-    def init_state(self) -> Set[str]:
-        return {str(sym) for sym in self.init}
+    def init_state(self) -> State:
+        return State(self.objects, self.init)
         
 
 def parse_problem(name: str, prob_list: List) -> Problem:
