@@ -112,7 +112,7 @@ class Graph:
     def mst_ready(self) -> bool:
         return self.num_nodes() == len(self.mst)
 
-    def mst_tsp_tour(self) -> List[int]:
+    def mst_tsp_tour(self) -> List[Hashable]:
         if not self.mst_ready():
             self.minimum_spanning_tree()
         visited = []
@@ -125,7 +125,7 @@ class Graph:
             for child in self.mst[node]:
                 self.dfs_mst_from(child, visited)
 
-    def tour_cost(self, tour) -> float:
+    def tour_cost(self, tour: List[Hashable]) -> float:
         return sum(self.edges[tour[i]][tour[(i + 1) % len(tour)]] for i in range(len(tour)))
 
     def all_pairs_shortest_paths(self):
