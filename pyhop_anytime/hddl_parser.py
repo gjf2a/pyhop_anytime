@@ -121,8 +121,11 @@ class UntypedSymbol:
     def rebind(self, bindings: Dict[str,str]) -> 'UntypedSymbol':
         return UntypedSymbol(self.name, self.positive, [bindings.get(param, param) for param in self.param_names])
 
-    def precondition(self, bindings: Dict[str,str]) -> Callable[['State'], bool]:
-        return lambda state: self.rebind(bindings) in state
+    def precondition(self, bindings: Dict[str,str], state: 'State') -> bool:
+        return self.rebind(bindings) in state
+
+    def effect(self, bindings: Dict[str, str], state: 'State'):
+        state.add_predicate(self.rebind(bindings))
 
 
 def make_untyped_symbol(symlist: List) -> UntypedSymbol:
@@ -139,7 +142,7 @@ def make_untyped_symbol(symlist: List) -> UntypedSymbol:
 
 class State:
     def __init__(self, objects: List[Parameter], predicates: List[UntypedSymbol]):
-        self.predicates = {copy.deepcopy(pred) for pred in predicates}
+        self.predicates = {copy.deepcopy(pred) for pred in predicates if pred.positive}
         self.objects = {obj.name for obj in objects}
         self.types2objects = {}
         for obj in objects:
@@ -158,6 +161,14 @@ class State:
     def all_objects_of(self, type_name: str) -> List[str]:
         return [obj for obj in self.types2objects[type_name]]
 
+    def add_predicate(self, predicate: UntypedSymbol):
+        if predicate.positive:
+            self.predicates.add(predicate)
+        else:
+            target = copy.deepcopy(predicate)
+            target.positive = True
+            self.predicates.remove(target)
+
 
 class Conjunction:
     def __init__(self, predicates: List[UntypedSymbol]):
@@ -166,8 +177,12 @@ class Conjunction:
     def __repr__(self):
         return f"Conjunction({self.predicates})"
 
-    def precondition(self, bindings: Dict[str, str]) -> Callable[[State], bool]:
-        return lambda state: all(p.precondition(bindings)(state) for p in self.predicates)
+    def precondition(self, bindings: Dict[str, str], state: State) -> bool:
+        return all(p.precondition(bindings, state) for p in self.predicates)
+
+    def effect(self, bindings: Dict[str, str], state: State):
+        for predicate in self.predicates:
+            predicate.effect(bindings, state)
 
 
 def binding_plus(bindings: Dict[str, str], param: str, value: str) -> Dict[str, str]:
@@ -184,9 +199,9 @@ class Universal:
     def __repr__(self):
         return f"Universal({self.param}, {self.pred})"
 
-    def precondition(self, bindings: Dict[str, str]) -> Callable[[State], bool]:
-        return lambda state: all(self.pred.precondition(binding_plus(bindings, self.param.name, name))(state)
-                                 for name in state.all_objects_of(self.param.ptype))
+    def precondition(self, bindings: Dict[str, str], state: State) -> bool:
+        return all(self.pred.precondition(binding_plus(bindings, self.param.name, name), state)
+                   for name in state.all_objects_of(self.param.ptype))
 
 
 def make_precond(prelist: List) -> Union[None, Conjunction, Universal, UntypedSymbol]:
@@ -260,10 +275,16 @@ class Action:
     def __repr__(self):
         return f"Action('{self.name}', {self.parameters}, {self.precondition}, {self.effects})"
 
-    def action_func(self, bindings: Dict[str,str]) -> Callable[[State], Union[None, State]]:
-        pass
-    # TODO: Create an effect() method for each of Conjunction and UntypedSymbol
-    #       Then create a final function for the precondition and effects.
+    def action_func(self) -> Callable[[State, List[str]], Union[None, State]]:
+        return lambda state, args: self.action_func_help({param: bound for (param, bound) in
+                                                          zip(self.parameters, args)},
+                                                         state)
+
+    def action_func_help(self, bindings: Dict[str,str], state: State) -> Union[None, State]:
+        if self.precondition.precondition(bindings, state):
+            updated = copy.deepcopy(state)
+            self.effects.effect(bindings, updated)
+            return updated
 
 
 def make_action(action_list: List) -> Action:
