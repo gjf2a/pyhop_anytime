@@ -92,6 +92,10 @@ def make_params(param_list: List[str]) -> List[Parameter]:
     return result
 
 
+def bind_params(params: List[Parameter], args: List[str]) -> Dict[str,str]:
+    return {param.name: bound for (param, bound) in zip(params, args)}
+
+
 class Task:
     def __init__(self, name: str, param_list: List[Parameter]):
         self.name = name
@@ -102,6 +106,19 @@ class Task:
 
     def type_list(self) -> List[str]:
         return [p.ptype for p in self.param_list]
+
+    def task_func(self, domain: 'Domain') -> Callable[['State', List[str]], TaskList]:
+        return lambda state, args: self.task_func_help(domain, state, args)
+
+    def task_func_help(self, domain: 'Domain', state: 'State', bindings: Dict[str,str]) -> TaskList:
+        # TODO:
+        #  For every method in the task (obtained from domain)
+        #    Bind the method as well as you can
+        #    Find all the remaining free variables in the precondition
+        #    * Each will have a data type
+        #    * Come up with a list of instantiations that include all combinations of bindings of free variables.
+        #    Add each method instantiation as a TaskList alternative
+        pass
 
 
 def make_task(task_list) -> Task:
@@ -242,12 +259,11 @@ class Method:
         return f"Method('{self.name}', {self.params}, '{self.task_name}', {self.preconditions}, {self.ordered_tasks})"
 
     def method_func(self) -> Callable[[State, List[str]], Union[None, TaskList]]:
-        return lambda state, args: self.method_func_help({param: bound for (param, bound) in
-                                                          zip(self.params, args)},
-                                                         state)
+        return lambda state, args: self.method_func_help(bind_params(self.params, args), state)
 
     def method_func_help(self, bindings: Dict[str,str], state: State) -> Union[None, TaskList]:
         if self.preconditions.precondition(bindings, state):
+            # TODO: Return a TaskList derived from self.ordered_tasks
             pass
 
 
@@ -287,9 +303,7 @@ class Action:
         return f"Action('{self.name}', {self.parameters}, {self.precondition}, {self.effects})"
 
     def action_func(self) -> Callable[[State, List[str]], Union[None, State]]:
-        return lambda state, args: self.action_func_help({param: bound for (param, bound) in
-                                                          zip(self.parameters, args)},
-                                                         state)
+        return lambda state, args: self.action_func_help(bind_params(self.parameters, args), state)
 
     def action_func_help(self, bindings: Dict[str,str], state: State) -> Union[None, State]:
         if self.precondition.precondition(bindings, state):
@@ -340,12 +354,6 @@ class Domain:
         else:
             print(f"{name} not found")
             assert False
-
-    def task_funcs(self) -> Dict[str,Callable[[State, List[str]], TaskList]]:
-        result = {}
-        for task, methods in self.task2methods.items():
-
-        return result
 
 
 def parse_domain(name: str, domain_list: List) -> Domain:
