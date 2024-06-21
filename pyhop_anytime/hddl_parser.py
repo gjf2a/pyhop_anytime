@@ -1,6 +1,8 @@
 import copy
 from typing import List, Union, Dict, Set, Callable
 
+from pyhop_anytime import TaskList
+
 
 def append_text(text: str, seq: List[str]):
     if len(text) > 0:
@@ -235,9 +237,22 @@ class Method:
         self.task_name = task_name
         self.preconditions = preconditions
         self.ordered_tasks = ordered_tasks
+        self.domain = None
 
     def __repr__(self):
         return f"Method('{self.name}', {self.params}, '{self.task_name}', {self.preconditions}, {self.ordered_tasks})"
+
+    def set_domain(self, domain: 'Domain'):
+        self.domain = domain
+
+    def method_func(self) -> Callable[[State, List[str]], Union[None, TaskList]]:
+        return lambda state, args: self.method_func_help({param: bound for (param, bound) in
+                                                          zip(self.params, args)},
+                                                         state)
+
+    def method_func_help(self, bindings: Dict[str,str], state: State) -> Union[None, TaskList]:
+        if self.preconditions.precondition(bindings, state):
+            pass
 
 
 def make_method(method_list: List) -> Method:
@@ -312,6 +327,13 @@ class Domain:
         self.methods = methods
         self.actions = actions
 
+        self.task2methods = {}
+        for method in methods.values():
+            method.set_domain(self)
+            if method.task_name not in self.task2methods:
+                self.task2methods[method.task_name] = []
+            self.task2methods[method.task_name].append(method)
+
     def __repr__(self):
         return f"Domain('{self.name}', {self.types}, {self.predicates}, {self.tasks}, {self.methods}, {self.actions})"
 
@@ -323,6 +345,9 @@ class Domain:
         else:
             print(f"{name} not found")
             assert False
+
+    def methods_for(self, task: str) -> List[Method]:
+        return self.task2methods[task]
 
 
 def parse_domain(name: str, domain_list: List) -> Domain:
