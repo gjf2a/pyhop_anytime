@@ -237,13 +237,9 @@ class Method:
         self.task_name = task_name
         self.preconditions = preconditions
         self.ordered_tasks = ordered_tasks
-        self.domain = None
 
     def __repr__(self):
         return f"Method('{self.name}', {self.params}, '{self.task_name}', {self.preconditions}, {self.ordered_tasks})"
-
-    def set_domain(self, domain: 'Domain'):
-        self.domain = domain
 
     def method_func(self) -> Callable[[State, List[str]], Union[None, TaskList]]:
         return lambda state, args: self.method_func_help({param: bound for (param, bound) in
@@ -329,7 +325,6 @@ class Domain:
 
         self.task2methods = {}
         for method in methods.values():
-            method.set_domain(self)
             if method.task_name not in self.task2methods:
                 self.task2methods[method.task_name] = []
             self.task2methods[method.task_name].append(method)
@@ -346,8 +341,11 @@ class Domain:
             print(f"{name} not found")
             assert False
 
-    def methods_for(self, task: str) -> List[Method]:
-        return self.task2methods[task]
+    def task_funcs(self) -> Dict[str,Callable[[State, List[str]], TaskList]]:
+        result = {}
+        for task, methods in self.task2methods.items():
+
+        return result
 
 
 def parse_domain(name: str, domain_list: List) -> Domain:
