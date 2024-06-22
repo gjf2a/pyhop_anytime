@@ -1,5 +1,5 @@
 import copy
-from typing import List, Union, Dict, Set, Callable
+from typing import List, Union, Dict, Set, Callable, Any
 
 from pyhop_anytime import TaskList
 
@@ -111,14 +111,28 @@ class Task:
         return lambda state, args: self.task_func_help(domain, state, args)
 
     def task_func_help(self, domain: 'Domain', state: 'State', bindings: Dict[str,str]) -> TaskList:
-        # TODO:
-        #  For every method in the task (obtained from domain)
-        #    Bind the method as well as you can
-        #    Find all the remaining free variables in the precondition
-        #    * Each will have a data type
-        #    * Come up with a list of instantiations that include all combinations of bindings of free variables.
-        #    Add each method instantiation as a TaskList alternative
-        pass
+        result = []
+        for method in domain.task2methods[self.name]:
+            free_vars = [param for param in method.params if param.name not in bindings]
+            candidate_objects = [state.all_objects_of(free_var.ptype) for free_var in free_vars]
+            all_possible = all_combos(candidate_objects)
+            for candidate in all_possible:
+                bindings = {free_vars[i]: candidate[i] for i in range(len(free_vars))}
+                if method.preconditions.precondition(bindings, state):
+                    result.append((method.name, candidate))
+        return TaskList(result)
+
+
+def all_combos(candidates: List[List[Any]]) -> List[List[Any]]:
+    if len(candidates) == 1:
+        return [[c] for c in candidates[0]]
+    else:
+        suffixes = all_combos(candidates[1:])
+        result = []
+        for c in candidates[0]:
+            for s in suffixes:
+                result.append([c] + s)
+        return result
 
 
 def make_task(task_list) -> Task:
@@ -263,8 +277,7 @@ class Method:
 
     def method_func_help(self, bindings: Dict[str,str], state: State) -> Union[None, TaskList]:
         if self.preconditions.precondition(bindings, state):
-            # TODO: Return a TaskList derived from self.ordered_tasks
-            pass
+            return TaskList([(task.name, [bindings[param] for param in task.param_names]) for task in self.ordered_tasks])
 
 
 def make_method(method_list: List) -> Method:
