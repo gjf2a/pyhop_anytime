@@ -1,5 +1,5 @@
 import copy
-from typing import List, Union, Dict, Set, Callable, Any
+from typing import List, Union, Dict, Set, Callable, Any, Tuple
 
 from pyhop_anytime import TaskList, Planner
 
@@ -419,7 +419,10 @@ class Problem:
 
     def init_state(self) -> State:
         return State(self.objects, self.init)
-        
+
+    def init_tasks(self) -> List[Tuple[str,List[str]]]:
+        return [(task.name, task.param_names) for task in self.tasks]
+
 
 def parse_problem(name: str, prob_list: List) -> Problem:
     assert prob_list[0][0] == ':domain'
@@ -448,8 +451,8 @@ def parse_problem(name: str, prob_list: List) -> Problem:
     return Problem(name, domain, objects, tasks, init, goal)
 
 
-def parse_hddl(domain_str: str):
-    py_list_form = eval(coalesce(tokenize(domain_str)))
+def parse_hddl(hddl_str: str) -> Union[Domain, Problem]:
+    py_list_form = eval(coalesce(tokenize(hddl_str)))
     assert py_list_form[0] == 'define'
     category = py_list_form[1][0]
     name = py_list_form[1][1]
