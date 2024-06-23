@@ -174,7 +174,8 @@ def make_untyped_symbol(symlist: List) -> UntypedSymbol:
 
 
 class State:
-    def __init__(self, objects: List[Parameter], predicates: List[UntypedSymbol]):
+    def __init__(self, name: str, objects: List[Parameter], predicates: List[UntypedSymbol]):
+        self.__name__ = name
         self.predicates = {copy.deepcopy(pred) for pred in predicates if pred.positive}
         self.objects = {obj.name for obj in objects}
         self.types2objects = {}
@@ -418,7 +419,7 @@ class Problem:
         return f"Problem('{self.name}', '{self.domain}', {self.objects}, {self.tasks}, {self.init}, {self.goal})"
 
     def init_state(self) -> State:
-        return State(self.objects, self.init)
+        return State(self.name, self.objects, self.init)
 
     def init_tasks(self) -> List[Tuple[str,List[str]]]:
         return [(task.name, task.param_names) for task in self.tasks]
