@@ -1,7 +1,7 @@
 import copy
 from typing import List, Union, Dict, Set, Callable, Any
 
-from pyhop_anytime import TaskList
+from pyhop_anytime import TaskList, Planner
 
 
 def append_text(text: str, seq: List[str]):
@@ -367,6 +367,16 @@ class Domain:
         else:
             print(f"{name} not found")
             assert False
+
+    def make_planner(self) -> Planner:
+        planner = Planner()
+        for task_name, task in self.tasks.items():
+            planner.add_method(task_name, task.task_func(self))
+        for method_name, method in self.methods.items():
+            planner.add_method(method_name, method.method_func())
+        for action_name, action in self.actions.items():
+            planner.add_operator(action_name, action.action_func())
+        return planner
 
 
 def parse_domain(name: str, domain_list: List) -> Domain:

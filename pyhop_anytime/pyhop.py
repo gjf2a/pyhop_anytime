@@ -48,6 +48,12 @@ class Planner:
     def declare_methods(self, *method_list):
         self.methods.update({method.__name__: method for method in method_list})
 
+    def add_operator(self, name: str, operator: Callable):
+        self.operators[name] = operator
+
+    def add_method(self, name: str, method: Callable):
+        self.methods[name] = method
+
     def print_operators(self):
         print(f'OPERATORS: {", ".join(self.operators)}')
 
