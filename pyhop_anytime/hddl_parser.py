@@ -124,7 +124,9 @@ class Task:
 
 
 def all_combos(candidates: List[List[Any]]) -> List[List[Any]]:
-    if len(candidates) == 1:
+    if len(candidates) == 0:
+        return []
+    elif len(candidates) == 1:
         return [[c] for c in candidates[0]]
     else:
         suffixes = all_combos(candidates[1:])
