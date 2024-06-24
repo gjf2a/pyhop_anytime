@@ -58,6 +58,12 @@ class Parameter:
     def __repr__(self):
         return f"Parameter('{self.name}', '{self.ptype}')"
 
+    def __eq__(self, other):
+        return type(other) == Parameter and other.name == self.name and other.ptype == self.ptype
+
+    def __hash__(self):
+        return self.name.__hash__() + self.ptype.__hash__()
+
 
 class Predicate:
     def __init__(self, name: str, param_list: Sequence[Parameter]):
@@ -202,10 +208,10 @@ def make_untyped_symbol(symlist: List) -> UntypedSymbol:
 
 
 class State:
-    def __init__(self, name: str, objects: Collection[Parameter], predicates: Collection[UntypedSymbol]):
+    def __init__(self, name: str, objects: List[Parameter], predicates: Collection[UntypedSymbol]):
         self.__name__ = name
         self.predicates = {copy.deepcopy(pred) for pred in predicates if pred.positive}
-        self.objects = {obj.name for obj in objects}
+        self.objects = {obj.name: obj.ptype for obj in objects}
         self.types2objects = {}
         for obj in objects:
             if obj.ptype not in self.types2objects:
@@ -213,7 +219,7 @@ class State:
             self.types2objects[obj.ptype].add(obj.name)
 
     def __repr__(self):
-        return f"State('{self.__name__}', {self.objects}, {self.predicates})"
+        return f"State('{self.__name__}', {[Parameter(n, t) for (n, t) in self.objects.items()]}, {self.predicates})"
 
     def __contains__(self, item: Union[str, UntypedSymbol]) -> bool:
         if type(item) == UntypedSymbol:
