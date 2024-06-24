@@ -111,26 +111,17 @@ class Task:
         return lambda state, args: self.task_func_help(domain, state, bind_params(self.param_list, args))
 
     def task_func_help(self, domain: 'Domain', state: 'State', bindings: Dict[str,str]) -> TaskList:
-        print("State: ", state)
         result = []
         for method in domain.task2methods[self.name]:
             free_vars = [param for param in method.params if param.name not in bindings]
             candidate_objects = [state.all_objects_of(free_var.ptype) for free_var in free_vars]
             all_possible = all_combos(candidate_objects)
-            print(f"Task {self.name}, method {method.name}")
-            print("Free vars", free_vars)
-            print("candidate objects", candidate_objects)
-            print("All possible", all_possible)
             for candidate in all_possible:
                 total_bindings = copy.deepcopy(bindings)
                 for i in range(len(free_vars)):
                     total_bindings[free_vars[i].name] = candidate[i]
-                print(total_bindings)
-                print(f"precondition {method.preconditions.rebind(total_bindings)}")
-                if method.preconditions.precondition(total_bindings, state):
-                    print("TRUE!!!")
+                if method.preconditions is None or method.preconditions.precondition(total_bindings, state):
                     result.append((method.name, candidate))
-        print(f"Returning task list {result} for {self.name}")
         return TaskList(result)
 
 
@@ -305,7 +296,7 @@ class Method:
         return lambda state, args: self.method_func_help(bind_params(self.params, args), state)
 
     def method_func_help(self, bindings: Dict[str,str], state: State) -> Union[None, TaskList]:
-        if self.preconditions.precondition(bindings, state):
+        if self.preconditions is None or self.preconditions.precondition(bindings, state):
             return TaskList([(task.name, [bindings[param] for param in task.param_names]) for task in self.ordered_tasks])
 
 
