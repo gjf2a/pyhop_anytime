@@ -137,9 +137,12 @@ class Task:
 def add_matching_method(domain: 'Domain', method: 'Method', bindings: Dict[str, str], state: 'State',
                         result: List[List[Tuple[str,Sequence[str]]]]):
     passes = True
+    precond = None
     if method.preconditions is None:
         if len(method.ordered_tasks) > 0:
-            precond = domain.actions[method.ordered_tasks[0].name].precondition
+            task1 = method.ordered_tasks[0].name
+            if task1 in domain.actions:
+                precond = domain.actions[task1].precondition
             if precond is not None:
                 passes = precond.precondition(bindings, state)
     else:
