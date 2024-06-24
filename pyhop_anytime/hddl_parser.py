@@ -188,6 +188,11 @@ class UntypedSymbol:
     def rebind(self, bindings: Dict[str,str]) -> 'UntypedSymbol':
         return UntypedSymbol(self.name, self.positive, [bindings.get(param, param) for param in self.param_names])
 
+    def negated(self) -> 'UntypedSymbol':
+        n = copy.deepcopy(self)
+        n.positive = not n.positive
+        return n
+
     def precondition(self, bindings: Dict[str,str], state: 'State') -> bool:
         return self.rebind(bindings) in state
 
@@ -223,7 +228,10 @@ class State:
 
     def __contains__(self, item: Union[str, UntypedSymbol]) -> bool:
         if type(item) == UntypedSymbol:
-            return (item in self.predicates) == item.positive
+            if item.positive:
+                return item in self.predicates
+            else:
+                return item.negated() not in self.predicates
         elif type(item) == str:
             return item in self.objects
         else:
