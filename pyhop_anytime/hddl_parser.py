@@ -121,7 +121,7 @@ class Task:
                 for i in range(len(free_vars)):
                     total_bindings[free_vars[i].name] = candidate[i]
                 if method.preconditions is None or method.preconditions.precondition(total_bindings, state):
-                    result.append((method.name, candidate))
+                    result.append([(method.name, candidate)])
         return TaskList(result)
 
 
@@ -339,7 +339,7 @@ class Action:
         return lambda state, args: self.action_func_help(bind_params(self.parameters, args), state)
 
     def action_func_help(self, bindings: Dict[str,str], state: State) -> Union[None, State]:
-        if self.precondition.precondition(bindings, state):
+        if self.precondition is None or self.precondition.precondition(bindings, state):
             updated = copy.deepcopy(state)
             self.effects.effect(bindings, updated)
             return updated
