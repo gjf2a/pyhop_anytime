@@ -21,4 +21,6 @@ if __name__ == '__main__':
                     if arg.startswith("-v"):
                         verbosity = int(arg.split('=')[1])
                 plan_times = planner.anyhop_random_tracked(problem.init_state(), problem.init_tasks(), max_seconds, verbose=verbosity)
+                # Curiously, regular DFS stack overflows due to repeatedly picking up and putting down a block.
+                #plan_times = planner.anyhop(problem.init_state(), problem.init_tasks(), max_seconds, verbose=verbosity)
                 print(plan_times[-1])
