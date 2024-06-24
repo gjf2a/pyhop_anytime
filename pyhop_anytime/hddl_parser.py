@@ -111,8 +111,7 @@ class Task:
         return lambda state, args: self.task_func_help(domain, state, bind_params(self.param_list, args))
 
     def task_func_help(self, domain: 'Domain', state: 'State', bindings: Dict[str,str]) -> TaskList:
-        print(type(bindings))
-        assert type(bindings) == dict
+        print("State: ", state)
         result = []
         for method in domain.task2methods[self.name]:
             free_vars = [param for param in method.params if param.name not in bindings]
@@ -129,6 +128,7 @@ class Task:
                 print(total_bindings)
                 print(f"precondition {method.preconditions.rebind(total_bindings)}")
                 if method.preconditions.precondition(total_bindings, state):
+                    print("TRUE!!!")
                     result.append((method.name, candidate))
         print(f"Returning task list {result} for {self.name}")
         return TaskList(result)
@@ -164,6 +164,12 @@ class UntypedSymbol:
     def __repr__(self):
         return f"UntypedSymbol('{self.name}', {self.positive}, {self.param_names})"
 
+    def __eq__(self, other):
+        return type(other) == UntypedSymbol and self.name == other.name and self.positive == other.positive and self.param_names == other.param_names
+
+    def __hash__(self):
+        return str(self).__hash__()
+
     def rebind(self, bindings: Dict[str,str]) -> 'UntypedSymbol':
         return UntypedSymbol(self.name, self.positive, [bindings.get(param, param) for param in self.param_names])
 
@@ -196,6 +202,9 @@ class State:
             if obj.ptype not in self.types2objects:
                 self.types2objects[obj.ptype] = set()
             self.types2objects[obj.ptype].add(obj.name)
+
+    def __repr__(self):
+        return f"State('{self.__name__}', {self.objects}, {self.predicates})"
 
     def __contains__(self, item: Union[str, UntypedSymbol]) -> bool:
         if type(item) == UntypedSymbol:
