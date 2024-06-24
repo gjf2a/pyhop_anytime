@@ -12,7 +12,9 @@ if __name__ == '__main__':
             with open(sys.argv[2]) as problem_file:
                 problem = parse_hddl(problem_file.read())
                 assert type(problem) == Problem
+                print("tasks", [(k, len(domain.task2methods[k])) for k in domain.task2methods.keys()])
                 planner = domain.make_planner()
+                planner.print_methods()
                 max_seconds = float(sys.argv[3])
-                plan_times = planner.anyhop(problem.init_state(), problem.init_tasks(), max_seconds)
+                plan_times = planner.anyhop(problem.init_state(), problem.init_tasks(), max_seconds, verbose=3)
                 print(plan_times[-1])

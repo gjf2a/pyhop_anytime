@@ -108,18 +108,29 @@ class Task:
         return [p.ptype for p in self.param_list]
 
     def task_func(self, domain: 'Domain') -> Callable[['State', List[str]], TaskList]:
-        return lambda state, args: self.task_func_help(domain, state, args)
+        return lambda state, args: self.task_func_help(domain, state, bind_params(self.param_list, args))
 
     def task_func_help(self, domain: 'Domain', state: 'State', bindings: Dict[str,str]) -> TaskList:
+        print(type(bindings))
+        assert type(bindings) == dict
         result = []
         for method in domain.task2methods[self.name]:
             free_vars = [param for param in method.params if param.name not in bindings]
             candidate_objects = [state.all_objects_of(free_var.ptype) for free_var in free_vars]
             all_possible = all_combos(candidate_objects)
+            print(f"Task {self.name}, method {method.name}")
+            print("Free vars", free_vars)
+            print("candidate objects", candidate_objects)
+            print("All possible", all_possible)
             for candidate in all_possible:
-                bindings = {free_vars[i]: candidate[i] for i in range(len(free_vars))}
-                if method.preconditions.precondition(bindings, state):
+                total_bindings = copy.deepcopy(bindings)
+                for i in range(len(free_vars)):
+                    total_bindings[free_vars[i].name] = candidate[i]
+                print(total_bindings)
+                print(f"precondition {method.preconditions.rebind(total_bindings)}")
+                if method.preconditions.precondition(total_bindings, state):
                     result.append((method.name, candidate))
+        print(f"Returning task list {result} for {self.name}")
         return TaskList(result)
 
 
@@ -213,6 +224,9 @@ class Conjunction:
     def __repr__(self):
         return f"Conjunction({self.predicates})"
 
+    def rebind(self, bindings: Dict[str, str]) -> 'Conjunction':
+        return Conjunction([p.rebind(bindings) for p in self.predicates])
+
     def precondition(self, bindings: Dict[str, str], state: State) -> bool:
         return all(p.precondition(bindings, state) for p in self.predicates)
 
@@ -234,6 +248,9 @@ class Universal:
 
     def __repr__(self):
         return f"Universal({self.param}, {self.pred})"
+
+    def rebind(self, bindings: Dict[str, str]) -> 'Universal':
+        return Universal(self.param, self.pred.rebind(bindings))
 
     def precondition(self, bindings: Dict[str, str], state: State) -> bool:
         return all(self.pred.precondition(binding_plus(bindings, self.param.name, name), state)
