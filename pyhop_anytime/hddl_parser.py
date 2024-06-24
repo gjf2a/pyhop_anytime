@@ -228,10 +228,11 @@ class State:
 
     def __contains__(self, item: Union[str, UntypedSymbol]) -> bool:
         if type(item) == UntypedSymbol:
-            if item.positive:
-                return item in self.predicates
-            else:
+            present = item in self.predicates
+            if not present and not item.positive:
                 return item.negated() not in self.predicates
+            else:
+                return present
         elif type(item) == str:
             return item in self.objects
         else:
