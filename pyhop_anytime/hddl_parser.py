@@ -1,5 +1,5 @@
 import copy
-from typing import List, Union, Dict, Set, Callable, Any, Tuple
+from typing import List, Union, Dict, Set, Callable, Any, Tuple, Sequence
 
 from pyhop_anytime import TaskList, Planner
 
@@ -60,9 +60,9 @@ class Parameter:
 
 
 class Predicate:
-    def __init__(self, name: str, param_list: List[Parameter]):
+    def __init__(self, name: str, param_list: Sequence[Parameter]):
         self.name = name
-        self.param_list = param_list
+        self.param_list = tuple(param_list)
 
     def __repr__(self):
         return f"Predicate('{self.name}', {self.param_list})"
@@ -71,11 +71,11 @@ class Predicate:
         return [p.ptype for p in self.param_list]
 
 
-def make_pred(pred_list: List) -> Predicate:
+def make_pred(pred_list: Sequence) -> Predicate:
     return Predicate(pred_list[0], make_params(pred_list[1:]))
 
 
-def make_params(param_list: List[str]) -> List[Parameter]:
+def make_params(param_list: Sequence[str]) -> List[Parameter]:
     result = []
     pending_names = []
     pending_type = False
@@ -92,14 +92,14 @@ def make_params(param_list: List[str]) -> List[Parameter]:
     return result
 
 
-def bind_params(params: List[Parameter], args: List[str]) -> Dict[str,str]:
+def bind_params(params: Sequence[Parameter], args: Sequence[str]) -> Dict[str,str]:
     return {param.name: bound for (param, bound) in zip(params, args)}
 
 
 class Task:
-    def __init__(self, name: str, param_list: List[Parameter]):
+    def __init__(self, name: str, param_list: Sequence[Parameter]):
         self.name = name
-        self.param_list = param_list
+        self.param_list = tuple(param_list)
 
     def __repr__(self):
         return f"Task('{self.name}', {self.param_list})"
@@ -107,7 +107,7 @@ class Task:
     def type_list(self) -> List[str]:
         return [p.ptype for p in self.param_list]
 
-    def task_func(self, domain: 'Domain') -> Callable[['State', List[str]], TaskList]:
+    def task_func(self, domain: 'Domain') -> Callable[['State', Sequence[str]], TaskList]:
         return lambda state, args: self.task_func_help(domain, state, bind_params(self.param_list, args))
 
     def task_func_help(self, domain: 'Domain', state: 'State', bindings: Dict[str,str]) -> TaskList:
@@ -117,8 +117,7 @@ class Task:
             print(f"considering method {method.name}")
             free_vars = [param for param in method.params if param.name not in bindings]
             if len(free_vars) == 0:
-                if method.preconditions is None or method.preconditions.precondition(bindings, state):
-                    result.append([(method.name, [bindings[p.name] for p in method.params])])
+                add_matching_method(method, bindings, state, result)
             else:
                 candidate_objects = [state.all_objects_of(free_var.ptype) for free_var in free_vars]
                 all_possible = all_combos(candidate_objects)
@@ -126,9 +125,14 @@ class Task:
                     total_bindings = copy.deepcopy(bindings)
                     for i in range(len(free_vars)):
                         total_bindings[free_vars[i].name] = candidate[i]
-                    if method.preconditions is None or method.preconditions.precondition(total_bindings, state):
-                        result.append([(method.name, [total_bindings[p.name] for p in method.params])])
+                    add_matching_method(method, total_bindings, state, result)
         return TaskList(result)
+
+
+def add_matching_method(method: 'Method', bindings: Dict[str, str], state: 'State',
+                        result: List[List[Tuple[str,Sequence[str]]]]):
+    if method.preconditions is None or method.preconditions.precondition(bindings, state):
+        result.append([(method.name, tuple([bindings[p.name] for p in method.params]))])
 
 
 def all_combos(candidates: List[List[Any]]) -> List[List[Any]]:
@@ -153,10 +157,10 @@ def make_task(task_list) -> Task:
 
 
 class UntypedSymbol:
-    def __init__(self, name: str, positive: bool, param_names: List[str]):
+    def __init__(self, name: str, positive: bool, param_names: Sequence[str]):
         self.name = name
         self.positive = positive
-        self.param_names = param_names
+        self.param_names = tuple(param_names)
 
     def __repr__(self):
         return f"UntypedSymbol('{self.name}', {self.positive}, {self.param_names})"
@@ -190,7 +194,7 @@ def make_untyped_symbol(symlist: List) -> UntypedSymbol:
 
 
 class State:
-    def __init__(self, name: str, objects: List[Parameter], predicates: List[UntypedSymbol]):
+    def __init__(self, name: str, objects: Set[Parameter], predicates: Set[UntypedSymbol]):
         self.__name__ = name
         self.predicates = {copy.deepcopy(pred) for pred in predicates if pred.positive}
         self.objects = {obj.name for obj in objects}
@@ -224,8 +228,8 @@ class State:
 
 
 class Conjunction:
-    def __init__(self, predicates: List[UntypedSymbol]):
-        self.predicates = predicates
+    def __init__(self, predicates: Sequence[UntypedSymbol]):
+        self.predicates = tuple(predicates)
 
     def __repr__(self):
         return f"Conjunction({self.predicates})"
@@ -287,18 +291,18 @@ def make_conjunction(conjunct_list: List) -> Union[None, Conjunction, UntypedSym
 
 
 class Method:
-    def __init__(self, name: str, params: List[Parameter], task_name: str, preconditions: Conjunction,
-                 ordered_tasks: List[UntypedSymbol]):
+    def __init__(self, name: str, params: Sequence[Parameter], task_name: str, preconditions: Conjunction,
+                 ordered_tasks: Sequence[UntypedSymbol]):
         self.name = name
-        self.params = params
+        self.params = tuple(params)
         self.task_name = task_name
         self.preconditions = preconditions
-        self.ordered_tasks = ordered_tasks
+        self.ordered_tasks = tuple(ordered_tasks)
 
     def __repr__(self):
         return f"Method('{self.name}', {self.params}, '{self.task_name}', {self.preconditions}, {self.ordered_tasks})"
 
-    def method_func(self) -> Callable[[State, List[str]], Union[None, TaskList]]:
+    def method_func(self) -> Callable[[State, Sequence[str]], Union[None, TaskList]]:
         return lambda state, args: self.method_func_help(bind_params(self.params, args), state)
 
     def method_func_help(self, bindings: Dict[str,str], state: State) -> Union[None, TaskList]:
@@ -330,11 +334,11 @@ def make_method(method_list: List) -> Method:
 
 
 class Action:
-    def __init__(self, name: str, parameters: List[Parameter],
+    def __init__(self, name: str, parameters: Sequence[Parameter],
                  precondition: Union[None, Conjunction, Universal, UntypedSymbol],
                  effects: Union[None, Conjunction, UntypedSymbol]):
         self.name = name
-        self.parameters = parameters
+        self.parameters = tuple(parameters)
         self.precondition = precondition
         self.effects = effects
 

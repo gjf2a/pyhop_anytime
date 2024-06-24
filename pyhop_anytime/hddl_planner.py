@@ -16,5 +16,5 @@ if __name__ == '__main__':
                 planner = domain.make_planner()
                 planner.print_methods()
                 max_seconds = float(sys.argv[3])
-                plan_times = planner.anyhop(problem.init_state(), problem.init_tasks(), max_seconds, verbose=3)
+                plan_times = planner.anyhop_random_tracked(problem.init_state(), problem.init_tasks(), max_seconds, verbose=3)
                 print(plan_times[-1])
