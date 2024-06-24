@@ -1,6 +1,6 @@
 import sys
 
-from pyhop_anytime.hddl_parser import parse_hddl, Domain, Problem, UntypedSymbol
+from pyhop_anytime.hddl_parser import parse_hddl, Domain, Problem
 
 if __name__ == '__main__':
     if len(sys.argv) < 4:
