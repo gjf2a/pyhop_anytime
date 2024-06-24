@@ -1,5 +1,5 @@
 import copy
-from typing import List, Union, Dict, Set, Callable, Any, Tuple, Sequence
+from typing import List, Union, Dict, Set, Callable, Any, Tuple, Sequence, Collection
 
 from pyhop_anytime import TaskList, Planner
 
@@ -108,16 +108,17 @@ class Task:
         return [p.ptype for p in self.param_list]
 
     def task_func(self, domain: 'Domain') -> Callable[['State', Sequence[str]], TaskList]:
-        return lambda state, args: self.task_func_help(domain, state, bind_params(self.param_list, args))
+        return lambda state, args: self.task_func_help(domain, state, args)
 
-    def task_func_help(self, domain: 'Domain', state: 'State', bindings: Dict[str,str]) -> TaskList:
+    def task_func_help(self, domain: 'Domain', state: 'State', args: Sequence[str]) -> TaskList:
         result = []
         print(f"working task {self.name}")
         for method in domain.task2methods[self.name]:
-            print(f"considering method {method.name}")
+            bindings = bind_params(method.params, args)
             free_vars = [param for param in method.params if param.name not in bindings]
+            print(f"considering method {method.name} with bindings {bindings} and free vars {free_vars}")
             if len(free_vars) == 0:
-                add_matching_method(method, bindings, state, result)
+                add_matching_method(domain, method, bindings, state, result)
             else:
                 candidate_objects = [state.all_objects_of(free_var.ptype) for free_var in free_vars]
                 all_possible = all_combos(candidate_objects)
@@ -125,13 +126,22 @@ class Task:
                     total_bindings = copy.deepcopy(bindings)
                     for i in range(len(free_vars)):
                         total_bindings[free_vars[i].name] = candidate[i]
-                    add_matching_method(method, total_bindings, state, result)
+                    add_matching_method(domain, method, total_bindings, state, result)
         return TaskList(result)
 
 
-def add_matching_method(method: 'Method', bindings: Dict[str, str], state: 'State',
+def add_matching_method(domain: 'Domain', method: 'Method', bindings: Dict[str, str], state: 'State',
                         result: List[List[Tuple[str,Sequence[str]]]]):
-    if method.preconditions is None or method.preconditions.precondition(bindings, state):
+    passes = True
+    if method.preconditions is None:
+        if len(method.ordered_tasks) > 0:
+            precond = domain.actions[method.ordered_tasks[0].name].precondition
+            if precond is not None:
+                passes = precond.precondition(bindings, state)
+    else:
+        passes = method.preconditions.precondition(bindings, state)
+
+    if passes:
         result.append([(method.name, tuple([bindings[p.name] for p in method.params]))])
 
 
@@ -194,7 +204,7 @@ def make_untyped_symbol(symlist: List) -> UntypedSymbol:
 
 
 class State:
-    def __init__(self, name: str, objects: Set[Parameter], predicates: Set[UntypedSymbol]):
+    def __init__(self, name: str, objects: Collection[Parameter], predicates: Collection[UntypedSymbol]):
         self.__name__ = name
         self.predicates = {copy.deepcopy(pred) for pred in predicates if pred.positive}
         self.objects = {obj.name for obj in objects}
@@ -450,7 +460,7 @@ class Problem:
     def init_state(self) -> State:
         return State(self.name, self.objects, self.init)
 
-    def init_tasks(self) -> List[Tuple[str,List[str]]]:
+    def init_tasks(self) -> List[Tuple[str,Sequence[str]]]:
         return [(task.name, task.param_names) for task in self.tasks]
 
 
