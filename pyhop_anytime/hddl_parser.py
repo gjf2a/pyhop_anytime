@@ -112,11 +112,9 @@ class Task:
 
     def task_func_help(self, domain: 'Domain', state: 'State', args: Sequence[str]) -> TaskList:
         result = []
-        print(f"working task {self.name}")
         for method in domain.task2methods[self.name]:
             bindings = bind_params(method.params, args)
             free_vars = [param for param in method.params if param.name not in bindings]
-            print(f"considering method {method.name} with bindings {bindings} and free vars {free_vars}")
             if len(free_vars) == 0:
                 add_matching_method(domain, method, bindings, state, result)
             else:
@@ -317,7 +315,10 @@ class Method:
 
     def method_func_help(self, bindings: Dict[str,str], state: State) -> Union[None, TaskList]:
         if self.preconditions is None or self.preconditions.precondition(bindings, state):
-            return TaskList([(task.name, [bindings[param] for param in task.param_names]) for task in self.ordered_tasks])
+            if len(self.ordered_tasks) == 0:
+                return TaskList(completed=True)
+            else:
+                return TaskList([(task.name, [bindings[param] for param in task.param_names]) for task in self.ordered_tasks])
 
 
 def make_method(method_list: List) -> Method:
