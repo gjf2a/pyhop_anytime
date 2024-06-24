@@ -112,16 +112,22 @@ class Task:
 
     def task_func_help(self, domain: 'Domain', state: 'State', bindings: Dict[str,str]) -> TaskList:
         result = []
+        print(f"working task {self.name}")
         for method in domain.task2methods[self.name]:
+            print(f"considering method {method.name}")
             free_vars = [param for param in method.params if param.name not in bindings]
-            candidate_objects = [state.all_objects_of(free_var.ptype) for free_var in free_vars]
-            all_possible = all_combos(candidate_objects)
-            for candidate in all_possible:
-                total_bindings = copy.deepcopy(bindings)
-                for i in range(len(free_vars)):
-                    total_bindings[free_vars[i].name] = candidate[i]
-                if method.preconditions is None or method.preconditions.precondition(total_bindings, state):
-                    result.append([(method.name, candidate)])
+            if len(free_vars) == 0:
+                if method.preconditions is None or method.preconditions.precondition(bindings, state):
+                    result.append([(method.name, [bindings[p.name] for p in method.params])])
+            else:
+                candidate_objects = [state.all_objects_of(free_var.ptype) for free_var in free_vars]
+                all_possible = all_combos(candidate_objects)
+                for candidate in all_possible:
+                    total_bindings = copy.deepcopy(bindings)
+                    for i in range(len(free_vars)):
+                        total_bindings[free_vars[i].name] = candidate[i]
+                    if method.preconditions is None or method.preconditions.precondition(total_bindings, state):
+                        result.append([(method.name, [total_bindings[p.name] for p in method.params])])
         return TaskList(result)
 
 
