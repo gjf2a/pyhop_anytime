@@ -29,7 +29,10 @@ def run_planner(domain_filename: str, problem_filename: str, max_seconds: float,
             prelim = [pt + (planner.plan_states(problem.init_state(), pt[0]),) for pt in plan_times]
             result = []
             for plan, length, duration, states in prelim:
+                print("goals: ", problem.goal)
+                print("state: ", states[-1])
                 goals_met = problem.goal.precondition({}, states[-1])
+                print("met? ", goals_met)
                 result.append((plan, length, duration, states, goals_met))
             return result
 

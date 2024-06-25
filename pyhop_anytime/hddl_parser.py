@@ -543,7 +543,7 @@ def parse_problem(name: str, prob_list: List) -> Problem:
         elif tag == ':init':
             init = [make_untyped_symbol(s) for s in thing[1:]]
         elif tag == ':goal':
-            goal = make_conjunction(thing[1:])
+            goal = make_conjunction(thing[1:][0])
         else:
             print(f"Don't recognize tag {tag}")
             assert False
