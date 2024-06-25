@@ -435,6 +435,7 @@ class Domain:
                     elif task1 in actions:
                         self.symbol2preconds[method_name] = copy.deepcopy(self.symbol2preconds[task1])
                     else:
+                        print(f"What is {task1} in {method}?")
                         assert False
             else:
                 self.symbol2preconds[method_name] = [method.precondition]
