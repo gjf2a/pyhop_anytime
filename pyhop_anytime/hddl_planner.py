@@ -26,7 +26,12 @@ def run_planner(domain_filename: str, problem_filename: str, max_seconds: float,
             if dfs:
                 plan_times = planner.anyhop(problem.init_state(), problem.init_tasks(), max_seconds, verbose=verbosity)
 
-            return [pt + (planner.plan_states(problem.init_state(), pt[0]),) for pt in plan_times]
+            prelim = [pt + (planner.plan_states(problem.init_state(), pt[0]),) for pt in plan_times]
+            result = []
+            for plan, length, duration, states in prelim:
+                goals_met = problem.goal.precondition({}, states[-1])
+                result.append((plan, length, duration, states, goals_met))
+            return result
 
 
 if __name__ == '__main__':

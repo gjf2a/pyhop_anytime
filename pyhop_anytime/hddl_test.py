@@ -33,7 +33,8 @@ class MyTestCase(unittest.TestCase):
                                  '/Users/ferrer/PycharmProjects/ipc2020-domains/total-order/Blocksworld-HPDDL/pfile_005.hddl',
                                  3, 0, 'random_tracked')
         print(plan_times)
-        # TODO: Check validity of goals for the final state for every plan_times entry.
+        for plan, length, duration, state, goals_met in plan_times:
+            self.assertTrue(goals_met)
 
 
 if __name__ == '__main__':
