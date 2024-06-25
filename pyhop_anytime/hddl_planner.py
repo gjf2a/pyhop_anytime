@@ -2,48 +2,44 @@ import sys
 
 from pyhop_anytime.hddl_parser import parse_hddl, Domain, Problem
 
+
+def run_planner(domain_filename: str, problem_filename: str, max_seconds: float, verbosity: int, planner_name: str):
+    with open(domain_filename) as domain_file:
+        domain = parse_hddl(domain_file.read())
+        assert type(domain) == Domain
+        with open(problem_filename) as problem_file:
+            problem = parse_hddl(problem_file.read())
+            assert type(problem) == Problem
+            planner = domain.make_planner()
+            planner.print_methods()
+
+            random_tracked = planner_name == 'random_tracked'
+            random = planner_name == 'random'
+            dfs = planner_name == 'dfs'
+
+            if random_tracked:
+                plan_times = planner.anyhop_random_tracked(problem.init_state(), problem.init_tasks(), max_seconds,
+                                                           verbose=verbosity)
+            if random:
+                plan_times = planner.anyhop_random(problem.init_state(), problem.init_tasks(), max_seconds, verbose=verbosity)
+
+            if dfs:
+                plan_times = planner.anyhop(problem.init_state(), problem.init_tasks(), max_seconds, verbose=verbosity)
+
+            return [pt + (planner.plan_states(problem.init_state(), pt[0]),) for pt in plan_times]
+
+
 if __name__ == '__main__':
     if len(sys.argv) < 4:
         print("Usage: python3 hddl_planner.py domain.hddl problem.hddl max_seconds [-v=verbosity] [-p=(random_tracked | random | dfs)]")
     else:
-        with open(sys.argv[1]) as domain_file:
-            domain = parse_hddl(domain_file.read())
-            assert type(domain) == Domain
-            with open(sys.argv[2]) as problem_file:
-                problem = parse_hddl(problem_file.read())
-                assert type(problem) == Problem
-                print("tasks", [(k, len(domain.task2methods[k])) for k in domain.task2methods.keys()])
-                planner = domain.make_planner()
-                planner.print_methods()
-                max_seconds = float(sys.argv[3])
-                verbosity = 0
-                for arg in sys.argv:
-                    if arg.startswith("-v"):
-                        verbosity = int(arg.split('=')[1])
-
-                random_tracked = False
-                random = False
-                dfs = False
-                for arg in sys.argv:
-                    if arg.startswith('-p'):
-                        planner_name = arg.split('=')[1]
-                        random_tracked = random_tracked or planner_name == 'random_tracked'
-                        random = random or planner_name == 'random'
-                        dfs = dfs or planner_name == 'dfs'
-                if not (random or dfs):
-                    random_tracked = True
-
-                if random_tracked:
-                    plan_times = planner.anyhop_random_tracked(problem.init_state(), problem.init_tasks(), max_seconds, verbose=verbosity)
-                    print("Random action tracked")
-                    print(plan_times[-1])
-                if random:
-                    plan_times = planner.anyhop_random(problem.init_state(), problem.init_tasks(), max_seconds,
-                                                       verbose=verbosity)
-                    print("Random")
-                    print(plan_times[-1])
-                if dfs:
-                    plan_times = planner.anyhop(problem.init_state(), problem.init_tasks(), max_seconds,
-                                                verbose=verbosity)
-                    print("DFS")
-                    print(plan_times[-1])
+        verbosity = 0
+        planner_name = 'random_tracked'
+        for arg in sys.argv:
+            if arg.startswith("-v"):
+                verbosity = int(arg.split('=')[1])
+            elif arg.startswith("-p"):
+                planner_name = arg.split('=')[1]
+        plan_times = run_planner(sys.argv[1], sys.argv[2], float(sys.argv[3]), verbosity, planner_name)
+        print(planner_name)
+        print(plan_times[-1] if len(plan_times) > 0 else "no plan found")

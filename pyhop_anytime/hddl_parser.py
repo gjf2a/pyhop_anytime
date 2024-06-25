@@ -113,6 +113,13 @@ class Task:
     def type_list(self) -> List[str]:
         return [p.ptype for p in self.param_list]
 
+    def first_task_names(self, domain: 'Domain') -> List[str]:
+        result = []
+        for method in domain.task2methods[self.name]:
+            if len(method.ordered_tasks) > 0:
+                result.append(method.ordered_tasks[0].name)
+        return result
+
     def task_func(self, domain: 'Domain') -> Callable[['State', Sequence[str]], TaskList]:
         return lambda state, args: self.task_func_help(domain, state, args)
 
@@ -137,16 +144,12 @@ class Task:
 def add_matching_method(domain: 'Domain', method: 'Method', bindings: Dict[str, str], state: 'State',
                         result: List[List[Tuple[str,Sequence[str]]]]):
     passes = True
-    precond = None
-    if method.preconditions is None:
-        if len(method.ordered_tasks) > 0:
-            task1 = method.ordered_tasks[0].name
-            if task1 in domain.actions:
-                precond = domain.actions[task1].precondition
-            if precond is not None:
-                passes = precond.precondition(bindings, state)
+    if method.precondition is None:
+        precond = domain.symbol2preconds[method.name]
+        if precond is not None:
+            passes = any(p.precondition(bindings, state) for p in precond)
     else:
-        passes = method.preconditions.precondition(bindings, state)
+        passes = method.precondition.precondition(bindings, state)
 
     if passes:
         result.append([(method.name, tuple([bindings[p.name] for p in method.params]))])
@@ -317,22 +320,26 @@ def make_conjunction(conjunct_list: List) -> Union[None, Conjunction, UntypedSym
 
 
 class Method:
-    def __init__(self, name: str, params: Sequence[Parameter], task_name: str, preconditions: Conjunction,
+    def __init__(self, name: str, params: Sequence[Parameter], task_name: str, precondition: Conjunction,
                  ordered_tasks: Sequence[UntypedSymbol]):
         self.name = name
         self.params = tuple(params)
         self.task_name = task_name
-        self.preconditions = preconditions
+        self.precondition = precondition
         self.ordered_tasks = tuple(ordered_tasks)
 
     def __repr__(self):
-        return f"Method('{self.name}', {self.params}, '{self.task_name}', {self.preconditions}, {self.ordered_tasks})"
+        return f"Method('{self.name}', {self.params}, '{self.task_name}', {self.precondition}, {self.ordered_tasks})"
+
+    def first_task_name(self) -> Union[None, str]:
+        if len(self.ordered_tasks) > 0:
+            return self.ordered_tasks[0].name
 
     def method_func(self) -> Callable[[State, Sequence[str]], Union[None, TaskList]]:
         return lambda state, args: self.method_func_help(bind_params(self.params, args), state)
 
     def method_func_help(self, bindings: Dict[str,str], state: State) -> Union[None, TaskList]:
-        if self.preconditions is None or self.preconditions.precondition(bindings, state):
+        if self.precondition is None or self.precondition.precondition(bindings, state):
             if len(self.ordered_tasks) == 0:
                 return TaskList(completed=True)
             else:
@@ -414,6 +421,39 @@ class Domain:
             if method.task_name not in self.task2methods:
                 self.task2methods[method.task_name] = []
             self.task2methods[method.task_name].append(method)
+
+        self.symbol2preconds = {}
+        unresolved2symbol = {}
+        for action_name, action in actions.items():
+            self.symbol2preconds[action_name] = [action.precondition]
+        for method_name, method in methods.items():
+            if method.precondition is None:
+                task1 = method.first_task_name()
+                if task1 is not None:
+                    if task1 in tasks:
+                        unresolved2symbol[method_name] = task1
+                    elif task1 in actions:
+                        self.symbol2preconds[method_name] = copy.deepcopy(self.symbol2preconds[task1])
+                    else:
+                        assert False
+            else:
+                self.symbol2preconds[method_name] = [method.precondition]
+        for task_name, task in tasks.items():
+            self.symbol2preconds[task_name] = []
+            for method in self.task2methods[task_name]:
+                if method.name in self.symbol2preconds:
+                    self.symbol2preconds[task_name].extend(self.symbol2preconds[method.name])
+        while len(unresolved2symbol) > 0:
+            progress = False
+            unresolved = list(unresolved2symbol)
+            for candidate in unresolved:
+                if unresolved2symbol[candidate] in self.symbol2preconds:
+                    precond = self.symbol2preconds[unresolved2symbol[candidate]]
+                    self.symbol2preconds[candidate] = copy.deepcopy(precond)
+                    self.symbol2preconds[self.methods[candidate].task_name].extend(precond)
+                    unresolved2symbol.pop(candidate)
+                    progress = True
+            assert progress
 
     def __repr__(self):
         return f"Domain('{self.name}', {self.types}, {self.predicates}, {self.tasks}, {self.methods}, {self.actions})"

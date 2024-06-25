@@ -1,6 +1,7 @@
 import unittest
 
 from pyhop_anytime.hddl_parser import State, UntypedSymbol, Parameter
+from pyhop_anytime.hddl_planner import run_planner
 
 
 class MyTestCase(unittest.TestCase):
@@ -21,6 +22,18 @@ class MyTestCase(unittest.TestCase):
         self.assertFalse(test_predicate.positive)
         self.assertFalse(test_predicate in state.predicates)
         self.assertTrue(test_predicate not in state)
+
+    def test_plan_robot(self):
+        plan_times = run_planner('/Users/ferrer/PycharmProjects/ipc2020-domains/total-order/Robot/domain.hddl',
+                                 '/Users/ferrer/PycharmProjects/ipc2020-domains/total-order/Robot/pfile_01_001.hddl',
+                                 3, 0, 'random_tracked')
+
+    def test_plan_blocks(self):
+        plan_times = run_planner('/Users/ferrer/PycharmProjects/ipc2020-domains/total-order/Blocksworld-HPDDL/domain.hddl',
+                                 '/Users/ferrer/PycharmProjects/ipc2020-domains/total-order/Blocksworld-HPDDL/pfile_005.hddl',
+                                 3, 0, 'random_tracked')
+        print(plan_times)
+        # TODO: Check validity of goals for the final state for every plan_times entry.
 
 
 if __name__ == '__main__':

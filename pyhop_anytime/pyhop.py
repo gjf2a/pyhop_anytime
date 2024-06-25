@@ -218,6 +218,15 @@ class Planner:
                 plans.append(plan)
         return plans
 
+    def plan_states(self, start_state, plan) -> List:
+        result = [start_state]
+        current_state = start_state
+        for action in plan:
+            operator = self.operators[action[0]]
+            current_state = operator(self.copy_func(current_state), *action[1:])
+            result.append(current_state)
+        return result
+
 
 def anyhop_single_shots(single_shot_planner, max_seconds):
     start_time = time.time()
