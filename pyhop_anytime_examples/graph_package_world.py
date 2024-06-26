@@ -79,7 +79,7 @@ def put_down(state, package):
 def generate_graph_world(width, height, capacity, num_locations, edge_prob, num_packages):
     state = State(f"graph_{width}x{height}_{num_packages}_packages_{capacity}_capacity")
     state.at = 0
-    state.width = width
+    state.width = width # TODO: Eliminate state.width and state.height
     state.height = height
     state.graph = Graph()
     state.graph.add_random_nodes_edges(num_locations, edge_prob, width, height)

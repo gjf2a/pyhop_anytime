@@ -31,6 +31,11 @@ class Graph:
                 print(f" ({target} [{cost:.2f}])", end='')
             print()
 
+    def euclidean_bounding_box(self) -> Tuple[float, float, float, float]:
+        xs = [x for (x, y) in self.nodes.values()]
+        ys = [y for (x, y) in self.nodes.values()]
+        return min(xs), min(ys), max(xs), max(ys)
+
     def num_nodes(self) -> int:
         return len(self.nodes)
 
