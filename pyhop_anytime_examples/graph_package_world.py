@@ -7,12 +7,12 @@
 
 from pyhop_anytime import State, TaskList, Planner, Graph
 from pyhop_anytime.stats import experiment
-import random
+import random, copy
 
 
 def deliver_all_packages_from(state, current):
     possibilities = []
-    for package, goal in enumerate(state.package_goals):
+    for package, goal in state.package_goals.items():
         if state.package_locations[package] != goal:
             if state.package_locations[package] == 'robot':
                 possibilities.append((package, goal))
@@ -79,8 +79,6 @@ def put_down(state, package):
 def generate_graph_world(width, height, capacity, num_locations, edge_prob, num_packages):
     state = State(f"graph_{width}x{height}_{num_packages}_packages_{capacity}_capacity")
     state.at = 0
-    state.width = width # TODO: Eliminate state.width and state.height
-    state.height = height
     state.graph = Graph()
     state.graph.add_random_nodes_edges(num_locations, edge_prob, width, height)
     state.capacity = capacity
@@ -88,12 +86,12 @@ def generate_graph_world(width, height, capacity, num_locations, edge_prob, num_
 
     package_candidates = state.graph.all_nodes()
     random.shuffle(package_candidates)
-    state.package_locations = package_candidates[:num_packages]
+    state.package_locations = {str(i): package_candidates[i] for i in range(num_packages)}
     package_goal_candidates = state.graph.all_nodes()
-    for start in state.package_locations:
+    for start in state.package_locations.values():
         package_goal_candidates.remove(start)
     random.shuffle(package_goal_candidates)
-    state.package_goals = package_goal_candidates[:num_packages]
+    state.package_goals = {str(i): package_goal_candidates[i] for i in range(num_packages)}
     return state, [('deliver_all_packages_from', state.at)]
 
 
@@ -101,8 +99,6 @@ def copy_graph_state(state):
     new_state = State(state.__name__)
 
     # Unchanging elements
-    new_state.width = state.width
-    new_state.height = state.height
     new_state.graph = state.graph
     new_state.capacity = state.capacity
     new_state.package_goals = state.package_goals
@@ -111,8 +107,8 @@ def copy_graph_state(state):
     new_state.at = state.at
 
     # Changing collection elements
-    new_state.holding = state.holding[:]
-    new_state.package_locations = state.package_locations[:]
+    new_state.holding = copy.deepcopy(state.holding)
+    new_state.package_locations = copy.deepcopy(state.package_locations)
 
     return new_state
 
