@@ -10,6 +10,13 @@ from pyhop_anytime.stats import experiment
 import random, copy
 
 
+def go_to(state, goal):
+    if state.at == goal:
+        return TaskList(completed=True)
+    else:
+        return TaskList([('move_one_step', state.at, state.graph.next_step_from_to(state.at, goal)), ('go_to', goal)])
+
+
 def deliver_all_packages_from(state, current):
     possibilities = []
     for package, goal in state.package_goals.items():
@@ -123,7 +130,7 @@ def action_cost(state, step):
 def make_graph_planner():
     p = Planner(copy_func=copy_graph_state, cost_func=action_cost)
     p.declare_operators(move_one_step, pick_up, put_down)
-    p.declare_methods(deliver_all_packages_from, possible_destinations, progress_task_list)
+    p.declare_methods(deliver_all_packages_from, possible_destinations, progress_task_list, go_to)
     return p
 
 
