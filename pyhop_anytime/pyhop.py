@@ -41,6 +41,10 @@ class Planner:
         self.operators = {}
         self.methods = {}
         self.verbose = verbose
+        self.reset_node_expansions()
+
+    def reset_node_expansions(self):
+        self.node_expansions = 0
 
     def declare_operators(self, *op_list):
         self.operators.update({op.__name__: op for op in op_list})
@@ -76,6 +80,7 @@ class Planner:
 
     def anyhop(self, state, tasks, max_seconds=None, verbose=0, disable_branch_bound=False,
                queue_init=lambda: SearchStack()):
+        self.reset_node_expansions()
         start_time = time.time()
         plan_times = []
         complete_search = True
@@ -100,6 +105,7 @@ class Planner:
         lowest_cost = None
         while not options.empty():
             candidate = options.dequeue_step()
+            self.node_expansions += 1
             if disable_branch_bound or lowest_cost is None or candidate.total_cost < lowest_cost:
                 self.log(2, f"depth {candidate.depth()} tasks {candidate.tasks}")
                 self.log(3, f"plan: {candidate.plan}")
@@ -130,12 +136,14 @@ class Planner:
         candidate = PlanStep([], tasks, state, self.copy_func, self.cost_func)
         while not (candidate is None or candidate.complete()):
             successors = candidate.successors(self)
+            self.node_expansions += 1
             if len(successors) == 0 or max_cost is not None and candidate.total_cost >= max_cost:
                 return None
             candidate = successors[random.randint(0, len(successors) - 1)]
         return candidate
 
     def anyhop_random(self, state, tasks, max_seconds, use_max_cost=True, verbose=0):
+        self.reset_node_expansions()
         if use_max_cost:
             return anyhop_single_shots(lambda max_cost: self.randhop(state, tasks, max_cost=max_cost, verbose=verbose),
                                        max_seconds)
@@ -144,6 +152,7 @@ class Planner:
                                        max_seconds)
 
     def anyhop_random_tracked(self, state, tasks, max_seconds, ignore_single=True, verbose=0):
+        self.reset_node_expansions()
         tracker = ActionTracker(tasks, state)
         return anyhop_single_shots(lambda max_cost: self.make_action_tracked_plan(tracker, verbose, ignore_single),
                                    max_seconds)
@@ -168,6 +177,7 @@ class Planner:
         chosen_methods = []
         while not (candidate is None or candidate.complete()):
             options = candidate.successors(self)
+            self.node_expansions += 1
             if len(options) == 0:
                 candidate = None
             elif ignore_single and len(options) == 1:

@@ -14,7 +14,9 @@ command_list = [
     ("hddl [filename]", "Load HDDL problem/domain"),
     ("current", "See current HDDL problem/domain"),
     ("planners", "List all planners"),
-    ("plan [planner] [time_limit]")
+    ("see_plan", "Show last plan, along with cost and time of discovery"),
+    ("see_plan_stats", "Show last plan cost and time of discovery"),
+    ("plan [planner] [time_limit]", "Find a plan using the given planner within the time limit")
 ]
 
 planners = {
@@ -28,6 +30,9 @@ if __name__ == '__main__':
     domain = None
     problem = None
     planner = None
+    last_plan = None
+    last_cost = None
+    last_discovery = None
     while running:
         cmd = input("> ")
         try:
@@ -60,8 +65,8 @@ if __name__ == '__main__':
                 start = time.time()
                 result = planners[pname](planner, problem, s)
                 duration = time.time() - start
-                print(f"{duration}s")
-                print(result)
+                print(f"{duration}s; {planner.node_expansions} node expansions")
+                last_plan, last_cost, last_discovery = result[-1]
             elif cmd.startswith("hddl"):
                 parts = cmd.split()
                 filename = parts[1]
@@ -74,6 +79,14 @@ if __name__ == '__main__':
                     problem = parsed
                 else:
                     print(f"Unrecognized type: {type(parsed)}")
+            elif cmd == "see_plan_stats":
+                if last_cost:
+                    print(f"Last cost: {last_cost}; discovered after {last_discovery}s")
+                else:
+                    print("No plan yet found")
+            elif cmd == "see_plan":
+                for op in last_plan:
+                    print(op)
             else:
                 print(f"Did not recognize: '{cmd}'")
         except Exception as e:
