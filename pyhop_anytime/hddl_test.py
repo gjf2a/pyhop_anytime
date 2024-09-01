@@ -23,19 +23,25 @@ class MyTestCase(unittest.TestCase):
         self.assertFalse(test_predicate in state.predicates)
         self.assertTrue(test_predicate not in state)
 
-    def test_plan_robot(self):
-        plan_times = run_planner('/Users/ferrer/PycharmProjects/ipc2020-domains/total-order/Robot/domain.hddl',
-                                 '/Users/ferrer/PycharmProjects/ipc2020-domains/total-order/Robot/pfile_01_001.hddl',
-                                 3, 0, 'random_tracked')
+    def _plan_generic(self, domain_name: str, problem_name: str, time_limit: int):
+        prefix = '/Users/ferrer/PycharmProjects/ipc2020-domains/total-order'
+        domain_file = f"{prefix}/{domain_name}/domain.hddl"
+        problem_file = f"{prefix}/{domain_name}/{problem_name}"
+        plan_times = run_planner(domain_file, problem_file, time_limit, 0, 'random_tracked')
         for plan, length, duration, state, goals_met in plan_times:
             self.assertTrue(goals_met)
 
+    def test_plan_robot(self):
+        self._plan_generic('Robot', 'pfile_01_001.hddl', 3)
+
+    def test_plan_robot_2(self):
+        self._plan_generic('Robot', 'pfile_02_002.hddl', 3)
+
+    def test_plan_robot_5(self):
+        self._plan_generic('Robot', 'pfile_05_005.hddl', 3)
+
     def test_plan_blocks(self):
-        plan_times = run_planner('/Users/ferrer/PycharmProjects/ipc2020-domains/total-order/Blocksworld-HPDDL/domain.hddl',
-                                 '/Users/ferrer/PycharmProjects/ipc2020-domains/total-order/Blocksworld-HPDDL/pfile_005.hddl',
-                                 3, 0, 'random_tracked')
-        for plan, length, duration, state, goals_met in plan_times:
-            self.assertTrue(goals_met)
+        self._plan_generic('Blocksworld-HPDDL', 'pfile_005.hddl', 3)
 
 
 if __name__ == '__main__':
