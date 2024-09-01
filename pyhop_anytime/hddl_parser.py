@@ -429,7 +429,9 @@ class Domain:
         for method_name, method in methods.items():
             if method.precondition is None:
                 task1 = method.first_task_name()
-                if task1 is not None:
+                if task1 is None:
+                    self.symbol2preconds[method_name] = []
+                else:
                     if task1 in tasks:
                         unresolved2symbol[method_name] = task1
                     elif task1 in actions:

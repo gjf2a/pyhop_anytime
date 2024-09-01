@@ -27,6 +27,8 @@ class MyTestCase(unittest.TestCase):
         plan_times = run_planner('/Users/ferrer/PycharmProjects/ipc2020-domains/total-order/Robot/domain.hddl',
                                  '/Users/ferrer/PycharmProjects/ipc2020-domains/total-order/Robot/pfile_01_001.hddl',
                                  3, 0, 'random_tracked')
+        for plan, length, duration, state, goals_met in plan_times:
+            self.assertTrue(goals_met)
 
     def test_plan_blocks(self):
         plan_times = run_planner('/Users/ferrer/PycharmProjects/ipc2020-domains/total-order/Blocksworld-HPDDL/domain.hddl',
