@@ -1,7 +1,7 @@
 import os
 from hddl_parser import parse_hddl
 
-prefix = 'c:/users/ferrer/pycharmprojects/ipc2020-domains/total-order'
+prefix = '../../ipc2020-domains/total-order'
 for domain in os.listdir(prefix):
     print(f"Testing {domain}...")
     try:

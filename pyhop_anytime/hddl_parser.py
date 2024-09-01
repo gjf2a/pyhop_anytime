@@ -356,13 +356,13 @@ def make_method(method_list: List) -> Method:
             task_name = method_list[i + 1][0]
         elif method_list[i] == ':precondition':
             preconditions = make_precond(method_list[i + 1])
-        elif method_list[i] == ':ordered-tasks':
-            assert method_list[i + 1][0] == 'and'
-            ordered_tasks = []
-            for task_list in method_list[i + 1][1:]:
-                ordered_tasks.append(make_untyped_symbol(task_list))
-        elif method_list[i] == ":ordered-subtasks":
-            ordered_tasks = [make_untyped_symbol(method_list[i + 1])]
+        elif method_list[i] in (':ordered-tasks', ':ordered-subtasks'):
+            if method_list[i + 1][0] == 'and':
+                ordered_tasks = []
+                for task_list in method_list[i + 1][1:]:
+                    ordered_tasks.append(make_untyped_symbol(task_list))
+            else:
+                ordered_tasks = [make_untyped_symbol(method_list[i + 1])]
         else:
             print(f"Unknown tag: {method_list[i]}")
             assert False
@@ -435,7 +435,7 @@ class Domain:
                     elif task1 in actions:
                         self.symbol2preconds[method_name] = copy.deepcopy(self.symbol2preconds[task1])
                     else:
-                        print(f"What is {task1} in {method}?")
+                        print(f'What is "{task1}" in "{method}"?')
                         assert False
             else:
                 self.symbol2preconds[method_name] = [method.precondition]
